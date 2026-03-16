@@ -25,7 +25,7 @@ export default function ProtectPDF() {
       // Real encryption would require a backend service
       const pdfBytes = await doc.save();
       setProgress(90);
-      const blob = new Blob([pdfBytes.buffer], { type: "application/pdf" });
+      const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
       setResultUrl(URL.createObjectURL(blob));
       setProgress(100);
       setStatus("done");

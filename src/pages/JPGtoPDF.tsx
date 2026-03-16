@@ -29,7 +29,7 @@ export default function JPGtoPDF() {
       }
 
       const pdfBytes = await doc.save();
-      const blob = new Blob([pdfBytes.buffer], { type: "application/pdf" });
+      const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
       setResultUrl(URL.createObjectURL(blob));
       setProgress(100);
       setStatus("done");
