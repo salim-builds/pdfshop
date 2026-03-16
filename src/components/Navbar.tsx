@@ -72,8 +72,19 @@ export default function Navbar() {
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
+          </div>
+
+          {/* Auth buttons */}
+          {user ? (
+            <Link to="/dashboard">
+              <Button variant="outline" size="sm"><User className="mr-1 h-4 w-4" /> Dashboard</Button>
+            </Link>
+          ) : (
+            <Link to="/auth">
+              <Button size="sm"><LogIn className="mr-1 h-4 w-4" /> Sign In</Button>
+            </Link>
+          )}
+        </div>
             )}
           </div>
         </div>
