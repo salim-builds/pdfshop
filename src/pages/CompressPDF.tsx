@@ -25,7 +25,7 @@ export default function CompressPDF() {
       // pdf-lib re-serialization strips some redundancy
       const pdfBytes = await doc.save();
       setProgress(90);
-      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const blob = new Blob([pdfBytes.buffer], { type: "application/pdf" });
       setResultUrl(URL.createObjectURL(blob));
 
       const original = files[0].size;

@@ -27,7 +27,7 @@ export default function SplitPDF() {
         const [page] = await newDoc.copyPages(doc, [i]);
         newDoc.addPage(page);
         const pdfBytes = await newDoc.save();
-        const blob = new Blob([pdfBytes], { type: "application/pdf" });
+        const blob = new Blob([pdfBytes.buffer], { type: "application/pdf" });
         urls.push({ url: URL.createObjectURL(blob), name: `page_${i + 1}.pdf` });
         setProgress(10 + ((i + 1) / total) * 85);
       }

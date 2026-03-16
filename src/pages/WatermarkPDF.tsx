@@ -40,7 +40,7 @@ export default function WatermarkPDF() {
 
       setProgress(80);
       const pdfBytes = await doc.save();
-      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const blob = new Blob([pdfBytes.buffer], { type: "application/pdf" });
       setResultUrl(URL.createObjectURL(blob));
       setProgress(100);
       setStatus("done");
