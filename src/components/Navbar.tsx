@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { FileText, ChevronDown, Menu, X } from "lucide-react";
+import { FileText, ChevronDown, Menu, X, User, LogIn } from "lucide-react";
 import { tools, categoryLabels, categoryColors, categoryBgColors, type ToolCategory } from "@/lib/tools";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
 const categories: ToolCategory[] = ["organize", "optimize", "convert-to", "convert-from", "edit", "security"];
 
@@ -15,6 +17,7 @@ const navLinks = [
 export default function Navbar() {
   const [megaOpen, setMegaOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -69,8 +72,19 @@ export default function Navbar() {
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
+          </div>
+
+          {/* Auth buttons */}
+          {user ? (
+            <Link to="/dashboard">
+              <Button variant="outline" size="sm"><User className="mr-1 h-4 w-4" /> Dashboard</Button>
+            </Link>
+          ) : (
+            <Link to="/auth">
+              <Button size="sm"><LogIn className="mr-1 h-4 w-4" /> Sign In</Button>
+            </Link>
+          )}
+        </div>
             )}
           </div>
         </div>
