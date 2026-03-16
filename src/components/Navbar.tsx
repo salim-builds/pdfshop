@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { FileText, ChevronDown, Menu, X } from "lucide-react";
+import { FileText, ChevronDown, Menu, X, User, LogIn } from "lucide-react";
 import { tools, categoryLabels, categoryColors, categoryBgColors, type ToolCategory } from "@/lib/tools";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
 const categories: ToolCategory[] = ["organize", "optimize", "convert-to", "convert-from", "edit", "security"];
 
