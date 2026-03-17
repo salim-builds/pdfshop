@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 const categories: ToolCategory[] = ["ai", "organize", "optimize", "convert-to", "convert-from", "edit", "security"];
 
 const navLinks = [
+  { label: "AI Summary", path: "/ai-summary" },
+  { label: "AI Chat", path: "/ai-chat" },
   { label: "Merge PDF", path: "/merge" },
   { label: "Split PDF", path: "/split" },
   { label: "Compress PDF", path: "/compress" },
-  { label: "Convert PDF", path: "/pdf-to-word" },
 ];
 
 export default function Navbar() {
