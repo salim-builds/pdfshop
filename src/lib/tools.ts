@@ -33,6 +33,7 @@ export const categoryColors: Record<ToolCategory, string> = {
   "convert-from": "text-convert-from",
   edit: "text-edit",
   security: "text-security",
+  ai: "text-primary",
 };
 
 export const categoryBgColors: Record<ToolCategory, string> = {
@@ -42,6 +43,7 @@ export const categoryBgColors: Record<ToolCategory, string> = {
   "convert-from": "bg-convert-from/10",
   edit: "bg-edit/10",
   security: "bg-security/10",
+  ai: "bg-primary/10",
 };
 
 export const tools: PDFTool[] = [
