@@ -5,7 +5,7 @@ import { tools, categoryLabels, categoryColors, categoryBgColors, type ToolCateg
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 
-const categories: ToolCategory[] = ["organize", "optimize", "convert-to", "convert-from", "edit", "security"];
+const categories: ToolCategory[] = ["ai", "organize", "optimize", "convert-to", "convert-from", "edit", "security"];
 
 const navLinks = [
   { label: "Merge PDF", path: "/merge" },
