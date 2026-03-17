@@ -1,10 +1,11 @@
 import {
   FileText, Scissors, Minimize2, FileOutput, Table, Presentation,
   Image, FileInput, Droplets, RotateCw, Lock, Unlock, FileType,
-  Stamp, PenTool, Hash, Layers, BookOpen, ScanLine, FileSearch
+  Stamp, PenTool, Hash, Layers, BookOpen, ScanLine, FileSearch,
+  Brain, MessageCircle
 } from "lucide-react";
 
-export type ToolCategory = "organize" | "optimize" | "convert-to" | "convert-from" | "edit" | "security";
+export type ToolCategory = "organize" | "optimize" | "convert-to" | "convert-from" | "edit" | "security" | "ai";
 
 export interface PDFTool {
   id: string;
@@ -22,6 +23,7 @@ export const categoryLabels: Record<ToolCategory, string> = {
   "convert-from": "Convert from PDF",
   edit: "Edit PDF",
   security: "PDF Security",
+  ai: "AI Tools",
 };
 
 export const categoryColors: Record<ToolCategory, string> = {
@@ -31,6 +33,7 @@ export const categoryColors: Record<ToolCategory, string> = {
   "convert-from": "text-convert-from",
   edit: "text-edit",
   security: "text-security",
+  ai: "text-primary",
 };
 
 export const categoryBgColors: Record<ToolCategory, string> = {
@@ -40,6 +43,7 @@ export const categoryBgColors: Record<ToolCategory, string> = {
   "convert-from": "bg-convert-from/10",
   edit: "bg-edit/10",
   security: "bg-security/10",
+  ai: "bg-primary/10",
 };
 
 export const tools: PDFTool[] = [
@@ -63,6 +67,8 @@ export const tools: PDFTool[] = [
   { id: "protect", name: "Protect PDF", description: "Add password protection", icon: Lock, category: "security", path: "/protect" },
   { id: "unlock", name: "Unlock PDF", description: "Remove PDF password", icon: Unlock, category: "security", path: "/unlock" },
   { id: "pdf-reader", name: "PDF Reader", description: "View PDF files online", icon: BookOpen, category: "edit", path: "/pdf-reader" },
+  { id: "ai-summary", name: "AI PDF Summary", description: "Get AI-powered PDF summary", icon: Brain, category: "ai", path: "/ai-summary" },
+  { id: "ai-chat", name: "AI Chat with PDF", description: "Chat with your PDF using AI", icon: MessageCircle, category: "ai", path: "/ai-chat" },
 ];
 
 export const getToolsByCategory = (category: ToolCategory) =>

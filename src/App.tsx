@@ -16,6 +16,8 @@ import JPGtoPDF from "./pages/JPGtoPDF";
 import PlaceholderTool from "./components/PlaceholderTool";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import AISummary from "./pages/AISummary";
+import AIChatPDF from "./pages/AIChatPDF";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +32,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/ai-summary" element={<AISummary />} />
+            <Route path="/ai-chat" element={<AIChatPDF />} />
             <Route path="/merge" element={<MergePDF />} />
             <Route path="/split" element={<SplitPDF />} />
             <Route path="/compress" element={<CompressPDF />} />
