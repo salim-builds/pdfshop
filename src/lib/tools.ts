@@ -67,6 +67,8 @@ export const tools: PDFTool[] = [
   { id: "protect", name: "Protect PDF", description: "Add password protection", icon: Lock, category: "security", path: "/protect" },
   { id: "unlock", name: "Unlock PDF", description: "Remove PDF password", icon: Unlock, category: "security", path: "/unlock" },
   { id: "pdf-reader", name: "PDF Reader", description: "View PDF files online", icon: BookOpen, category: "edit", path: "/pdf-reader" },
+  { id: "ai-summary", name: "AI PDF Summary", description: "Get AI-powered PDF summary", icon: Brain, category: "ai", path: "/ai-summary" },
+  { id: "ai-chat", name: "AI Chat with PDF", description: "Chat with your PDF using AI", icon: MessageCircle, category: "ai", path: "/ai-chat" },
 ];
 
 export const getToolsByCategory = (category: ToolCategory) =>
