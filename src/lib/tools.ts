@@ -23,6 +23,7 @@ export const categoryLabels: Record<ToolCategory, string> = {
   "convert-from": "Convert from PDF",
   edit: "Edit PDF",
   security: "PDF Security",
+  ai: "AI Tools",
 };
 
 export const categoryColors: Record<ToolCategory, string> = {
