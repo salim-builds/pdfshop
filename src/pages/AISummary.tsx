@@ -150,7 +150,7 @@ export default function AISummary() {
               )}
               {processing && (
                 <div className="mt-6">
-                  <ProcessingBar progress={progress} label={!isPremium ? "Processing first 2 pages for faster results..." : "Analyzing your PDF..."} />
+                  <ProcessingBar progress={progress} status="processing" message={!isPremium ? "Processing first 2 pages for faster results..." : "Analyzing your PDF..."} />
                 </div>
               )}
             </>

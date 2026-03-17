@@ -139,7 +139,7 @@ export default function AIChatPDF() {
 
           {!pdfLoaded && (
             <>
-              <DropZone files={files} setFiles={setFiles} accept=".pdf" multiple={false} />
+              <DropZone files={files} onFilesChange={setFiles} accept=".pdf" multiple={false} />
               {files.length > 0 && (
                 <div className="mt-4 text-center">
                   <Button size="lg" onClick={handleLoadPDF}>
