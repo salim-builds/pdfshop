@@ -135,7 +135,7 @@ export default function AISummary() {
 
           {!summary && (
             <>
-              <DropZone files={files} setFiles={setFiles} accept=".pdf" multiple={false} />
+              <DropZone files={files} onFilesChange={setFiles} accept=".pdf" multiple={false} />
               {files.length > 0 && !processing && (
                 <div className="mt-4 text-center">
                   <Button size="lg" onClick={handleProcess}>
