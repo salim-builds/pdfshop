@@ -5,7 +5,7 @@ import {
   Brain, MessageCircle
 } from "lucide-react";
 
-export type ToolCategory = "organize" | "optimize" | "convert-to" | "convert-from" | "edit" | "security";
+export type ToolCategory = "organize" | "optimize" | "convert-to" | "convert-from" | "edit" | "security" | "ai";
 
 export interface PDFTool {
   id: string;
