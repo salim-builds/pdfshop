@@ -25,6 +25,17 @@ export default function Auth() {
     if (user) navigate("/dashboard");
   }, [user, navigate]);
 
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    setLoading(false);
+    if (result?.error) {
+      toast({ title: "Google sign-in failed", description: String(result.error), variant: "destructive" });
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
