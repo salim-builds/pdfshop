@@ -18,6 +18,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import AISummary from "./pages/AISummary";
 import AIChatPDF from "./pages/AIChatPDF";
+import Pricing from "./pages/Pricing";
 
 const queryClient = new QueryClient();
 
