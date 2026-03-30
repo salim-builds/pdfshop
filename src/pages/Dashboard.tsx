@@ -8,7 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, FileText, Clock, CreditCard, Trash2 } from "lucide-react";
+import { LogOut, FileText, Clock, CreditCard, Trash2, Loader2, CheckCircle } from "lucide-react";
+import { toast } from "sonner";
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 interface FileHistoryItem {
   id: string;
@@ -25,17 +32,18 @@ interface Profile {
 }
 
 const plans = [
-  { id: "free", name: "Free", price: "$0", features: ["5 files/day", "Basic tools", "No watermark"] },
-  { id: "pro", name: "Pro", price: "$9/mo", features: ["Unlimited files", "All tools", "Priority processing", "File history"] },
-  { id: "business", name: "Business", price: "$29/mo", features: ["Everything in Pro", "API access", "Team workspace", "Priority support"] },
+  { id: "free", name: "Free", price: "₹0", priceNum: 0, features: ["5 files/day", "3 AI summaries/day", "1 AI chat/day", "First 2 pages only"] },
+  { id: "pro", name: "Pro", price: "₹199/mo", priceNum: 199, features: ["Unlimited files", "Unlimited AI summaries", "Unlimited AI chat", "Full document processing", "Priority speed"] },
+  { id: "business", name: "Business", price: "₹299/mo", priceNum: 299, features: ["Everything in Pro", "API access", "Team workspace", "Priority support", "No watermark"] },
 ];
 
 export default function Dashboard() {
-  const { user, loading, signOut } = useAuth();
+  const { user, session, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [history, setHistory] = useState<FileHistoryItem[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState<"history" | "plans">("history");
+  const [upgrading, setUpgrading] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
@@ -67,6 +75,82 @@ export default function Dashboard() {
     return `${(bytes / 1048576).toFixed(1)} MB`;
   };
 
+  const handleUpgrade = async (planId: string) => {
+    if (!session?.access_token || planId === "free") return;
+    setUpgrading(planId);
+
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const createRes = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/create-order`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ plan_id: planId }),
+        }
+      );
+
+      if (!createRes.ok) throw new Error("Failed to create order");
+      const orderData = await createRes.json();
+
+      const options = {
+        key: orderData.key_id,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "PDFShop.in",
+        description: `Upgrade to ${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
+        order_id: orderData.order_id,
+        handler: async (response: any) => {
+          try {
+            const verifyRes = await fetch(
+              `https://${projectId}.supabase.co/functions/v1/verify-payment`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  plan_id: planId,
+                }),
+              }
+            );
+
+            if (!verifyRes.ok) throw new Error("Verification failed");
+
+            setProfile((prev) => prev ? { ...prev, plan: planId } : prev);
+            toast.success("Plan upgraded successfully! 🎉");
+          } catch {
+            toast.error("Payment verification failed. Please contact support.");
+          }
+        },
+        prefill: {
+          email: user?.email || "",
+        },
+        theme: {
+          color: "#6366f1",
+        },
+        modal: {
+          ondismiss: () => setUpgrading(null),
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to initiate payment. Please try again.");
+    } finally {
+      setUpgrading(null);
+    }
+  };
+
   if (loading) return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   if (!user) return null;
 
@@ -88,7 +172,6 @@ export default function Dashboard() {
             <Button variant="outline" onClick={signOut}><LogOut className="mr-2 h-4 w-4" /> Sign Out</Button>
           </div>
 
-          {/* Tabs */}
           <div className="flex gap-2 mb-6">
             <Button variant={activeTab === "history" ? "default" : "outline"} onClick={() => setActiveTab("history")}>
               <Clock className="mr-2 h-4 w-4" /> File History
@@ -153,24 +236,48 @@ export default function Dashboard() {
 
           {activeTab === "plans" && (
             <div className="grid gap-6 md:grid-cols-3">
-              {plans.map((plan) => (
-                <Card key={plan.id} className={plan.id === profile?.plan ? "border-primary ring-2 ring-primary/20" : ""}>
-                  <CardHeader>
-                    <CardTitle>{plan.name}</CardTitle>
-                    <CardDescription className="text-2xl font-bold text-foreground">{plan.price}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {plan.features.map((f) => (
-                        <li key={f} className="text-sm text-muted-foreground">✓ {f}</li>
-                      ))}
-                    </ul>
-                    <Button className="w-full mt-6" variant={plan.id === profile?.plan ? "secondary" : "default"} disabled={plan.id === profile?.plan}>
-                      {plan.id === profile?.plan ? "Current Plan" : "Upgrade"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+              {plans.map((plan) => {
+                const isCurrent = plan.id === profile?.plan;
+                const isPopular = plan.id === "pro";
+                return (
+                  <Card key={plan.id} className={`relative ${isCurrent ? "border-primary ring-2 ring-primary/20" : ""} ${isPopular ? "shadow-lg scale-105" : ""}`}>
+                    {isPopular && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
+                      </div>
+                    )}
+                    <CardHeader>
+                      <CardTitle>{plan.name}</CardTitle>
+                      <CardDescription className="text-2xl font-bold text-foreground">{plan.price}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2">
+                        {plan.features.map((f) => (
+                          <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <CheckCircle className="h-4 w-4 text-primary shrink-0" /> {f}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        className="w-full mt-6"
+                        variant={isCurrent ? "secondary" : "default"}
+                        disabled={isCurrent || upgrading === plan.id || plan.id === "free"}
+                        onClick={() => handleUpgrade(plan.id)}
+                      >
+                        {upgrading === plan.id ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
+                        ) : isCurrent ? (
+                          "Current Plan"
+                        ) : plan.id === "free" ? (
+                          "Free Plan"
+                        ) : (
+                          "Upgrade Now"
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
