@@ -35,6 +35,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/ai-summary" element={<AISummary />} />
             <Route path="/ai-chat" element={<AIChatPDF />} />
+            <Route path="/pricing" element={<Pricing />} />
             <Route path="/merge" element={<MergePDF />} />
             <Route path="/split" element={<SplitPDF />} />
             <Route path="/compress" element={<CompressPDF />} />

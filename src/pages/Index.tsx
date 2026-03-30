@@ -23,6 +23,13 @@ export default function Index() {
           <p className="mx-auto mt-4 max-w-lg text-lg text-muted-foreground">
             Merge, split, compress, convert, edit, and secure your PDFs — all in one place, entirely in your browser.
           </p>
+          <div className="mt-6">
+            <a href="/pricing">
+              <button className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
+                View Pricing
+              </button>
+            </a>
+          </div>
         </div>
       </section>
 
