@@ -19,6 +19,12 @@ interface ChatMessage {
   content: string;
 }
 
+const PLAN_PAGE_LIMITS: Record<string, number> = {
+  basic: 2,
+  pro: 50,
+  business: 100,
+};
+
 export default function AIChatPDF() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -29,7 +35,8 @@ export default function AIChatPDF() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
+  const [userPlan, setUserPlan] = useState("free");
+  const [usageInfo, setUsageInfo] = useState<{ chats_used: number; chats_limit: number } | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,11 +44,11 @@ export default function AIChatPDF() {
   }, [messages]);
 
   const checkPlan = useCallback(async () => {
-    if (!user) return false;
+    if (!user) return "free";
     const { data } = await supabase.from("profiles").select("plan").eq("user_id", user.id).single();
-    const premium = data?.plan === "pro" || data?.plan === "business";
-    setIsPremium(premium);
-    return premium;
+    const plan = data?.plan || "free";
+    setUserPlan(plan);
+    return plan;
   }, [user]);
 
   const extractText = async (file: File, maxPages: number): Promise<string> => {
@@ -75,8 +82,12 @@ export default function AIChatPDF() {
     if (files.length === 0) return;
 
     try {
-      const premium = await checkPlan();
-      const maxPages = premium ? 50 : 2;
+      const plan = await checkPlan();
+      if (plan === "free") {
+        setShowUpgrade(true);
+        return;
+      }
+      const maxPages = PLAN_PAGE_LIMITS[plan] || 2;
       const text = await extractText(files[0], maxPages);
       setPdfText(text);
       setPdfLoaded(true);
@@ -95,16 +106,16 @@ export default function AIChatPDF() {
     setLoading(true);
 
     try {
-      if (!isPremium) {
-        await new Promise((r) => setTimeout(r, 3000));
+      if (userPlan === "basic") {
+        await new Promise((r) => setTimeout(r, 2000));
       }
 
       const { data, error } = await supabase.functions.invoke("ai-chat", {
-        body: { pdfText, question, isPremium },
+        body: { pdfText, question },
       });
 
       if (error) throw error;
-      if (data?.error === "limit_reached") {
+      if (data?.error === "upgrade_required" || data?.error === "limit_reached") {
         setShowUpgrade(true);
         setLoading(false);
         return;
@@ -112,12 +123,15 @@ export default function AIChatPDF() {
       if (data?.error) throw new Error(data.error);
 
       setMessages((prev) => [...prev, { role: "assistant", content: data.answer }]);
+      if (data.usage) setUsageInfo(data.usage);
     } catch (e: any) {
       toast({ title: "Error", description: e.message || "Failed to get answer", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
+
+  const isPaid = userPlan !== "free";
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -130,9 +144,14 @@ export default function AIChatPDF() {
             </div>
             <h1 className="text-3xl font-bold text-foreground">AI Chat with PDF</h1>
             <p className="mt-2 text-muted-foreground">Ask questions about your PDF and get instant answers</p>
-            {!isPremium && (
+            {!isPaid && (
               <Badge variant="secondary" className="mt-2">
-                <Zap className="mr-1 h-3 w-3" /> Free: 1 chat/day · First 2 pages
+                <Lock className="mr-1 h-3 w-3" /> Paid plan required
+              </Badge>
+            )}
+            {isPaid && usageInfo && (
+              <Badge variant="secondary" className="mt-2">
+                <Zap className="mr-1 h-3 w-3" /> {usageInfo.chats_limit - usageInfo.chats_used} chats left today
               </Badge>
             )}
           </div>
@@ -145,8 +164,8 @@ export default function AIChatPDF() {
                   <Button size="lg" onClick={handleLoadPDF}>
                     <MessageCircle className="mr-2 h-4 w-4" /> Start Chat
                   </Button>
-                  {!isPremium && (
-                    <p className="mt-2 text-xs text-muted-foreground">⚡ Processing first 2 pages for faster results</p>
+                  {userPlan === "basic" && (
+                    <p className="mt-2 text-xs text-muted-foreground">⚡ Processing first 2 pages on Basic plan</p>
                   )}
                 </div>
               )}
@@ -198,12 +217,10 @@ export default function AIChatPDF() {
                   </Button>
                 </div>
 
-                {!isPremium && (
-                  <div className="mt-3 flex items-center justify-center">
-                    <Button variant="ghost" size="sm" onClick={() => setShowUpgrade(true)}>
-                      <Crown className="mr-1 h-3 w-3" /> Unlock full PDF analysis with Premium
-                    </Button>
-                  </div>
+                {isPaid && usageInfo && (
+                  <p className="mt-2 text-center text-xs text-muted-foreground">
+                    {usageInfo.chats_limit - usageInfo.chats_used} chats remaining today
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -215,17 +232,21 @@ export default function AIChatPDF() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Crown className="h-5 w-5 text-primary" /> Upgrade to Premium
+              <Crown className="h-5 w-5 text-primary" /> {userPlan === "free" ? "Upgrade to use AI" : "Daily limit reached"}
             </DialogTitle>
-            <DialogDescription>Unlock the full power of AI PDF tools</DialogDescription>
+            <DialogDescription>
+              {userPlan === "free"
+                ? "AI features require a paid plan. Start with AI Basic at ₹99/month."
+                : "You've used all your AI chats today. Upgrade your plan for more."}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-4">
-            <div className="flex items-center gap-2 text-sm"><Sparkles className="h-4 w-4 text-primary" /> Unlimited AI chat</div>
+            <div className="flex items-center gap-2 text-sm"><Sparkles className="h-4 w-4 text-primary" /> AI chat with PDFs</div>
             <div className="flex items-center gap-2 text-sm"><Zap className="h-4 w-4 text-primary" /> Faster processing</div>
             <div className="flex items-center gap-2 text-sm"><Lock className="h-4 w-4 text-primary" /> Full document analysis</div>
           </div>
           <div className="flex gap-2">
-            <Button className="flex-1" onClick={() => navigate("/dashboard")}>View Plans — ₹199/mo</Button>
+            <Button className="flex-1" onClick={() => navigate("/pricing")}>View Plans</Button>
             <Button variant="outline" onClick={() => setShowUpgrade(false)}>Later</Button>
           </div>
         </DialogContent>

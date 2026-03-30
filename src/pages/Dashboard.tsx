@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, FileText, Clock, CreditCard, Trash2, Loader2, CheckCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { LogOut, FileText, Clock, CreditCard, Trash2, Loader2, CheckCircle, Brain, MessageCircle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 declare global {
@@ -31,10 +32,23 @@ interface Profile {
   plan: string;
 }
 
+interface AiUsage {
+  summaries_used: number;
+  chats_used: number;
+}
+
+const PLAN_LIMITS: Record<string, { summaries: number; chats: number }> = {
+  free: { summaries: 0, chats: 0 },
+  basic: { summaries: 15, chats: 5 },
+  pro: { summaries: 80, chats: 30 },
+  business: { summaries: 150, chats: 80 },
+};
+
 const plans = [
-  { id: "free", name: "Free", price: "₹0", priceNum: 0, features: ["5 files/day", "3 AI summaries/day", "1 AI chat/day", "First 2 pages only"] },
-  { id: "pro", name: "Pro", price: "₹199/mo", priceNum: 199, features: ["Unlimited files", "Unlimited AI summaries", "Unlimited AI chat", "Full document processing", "Priority speed"] },
-  { id: "business", name: "Business", price: "₹299/mo", priceNum: 299, features: ["Everything in Pro", "API access", "Team workspace", "Priority support", "No watermark"] },
+  { id: "free", name: "Free", price: "₹0", priceNum: 0, features: ["Unlimited PDF tools", "No AI features"] },
+  { id: "basic", name: "AI Basic", price: "₹99/mo", priceNum: 99, features: ["15 AI summaries/day", "5 AI chats/day", "First 2 pages", "Faster processing"] },
+  { id: "pro", name: "AI Pro", price: "₹299/mo", priceNum: 299, features: ["80 AI summaries/day", "30 AI chats/day", "Full document processing", "Fastest speed", "No watermark"] },
+  { id: "business", name: "Business", price: "₹499/mo", priceNum: 499, features: ["150 AI summaries/day", "80 AI chats/day", "API access", "Team workspace", "Priority support"] },
 ];
 
 export default function Dashboard() {
@@ -42,6 +56,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [history, setHistory] = useState<FileHistoryItem[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [aiUsage, setAiUsage] = useState<AiUsage>({ summaries_used: 0, chats_used: 0 });
   const [activeTab, setActiveTab] = useState<"history" | "plans">("history");
   const [upgrading, setUpgrading] = useState<string | null>(null);
 
@@ -53,12 +68,15 @@ export default function Dashboard() {
     if (!user) return;
 
     const fetchData = async () => {
-      const [historyRes, profileRes] = await Promise.all([
+      const today = new Date().toISOString().split("T")[0];
+      const [historyRes, profileRes, usageRes] = await Promise.all([
         supabase.from("file_history").select("*").order("created_at", { ascending: false }).limit(50),
         supabase.from("profiles").select("display_name, plan").eq("user_id", user.id).single(),
+        supabase.from("ai_usage").select("summaries_used, chats_used").eq("user_id", user.id).eq("usage_date", today).maybeSingle(),
       ]);
       if (historyRes.data) setHistory(historyRes.data);
       if (profileRes.data) setProfile(profileRes.data);
+      if (usageRes.data) setAiUsage({ summaries_used: usageRes.data.summaries_used, chats_used: usageRes.data.chats_used });
     };
     fetchData();
   }, [user]);
@@ -101,7 +119,7 @@ export default function Dashboard() {
         amount: orderData.amount,
         currency: orderData.currency,
         name: "PDFShop.in",
-        description: `Upgrade to ${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
+        description: `Upgrade to ${plans.find(p => p.id === planId)?.name || planId} Plan`,
         order_id: orderData.order_id,
         handler: async (response: any) => {
           try {
@@ -130,15 +148,9 @@ export default function Dashboard() {
             toast.error("Payment verification failed. Please contact support.");
           }
         },
-        prefill: {
-          email: user?.email || "",
-        },
-        theme: {
-          color: "#6366f1",
-        },
-        modal: {
-          ondismiss: () => setUpgrading(null),
-        },
+        prefill: { email: user?.email || "" },
+        theme: { color: "#6366f1" },
+        modal: { ondismiss: () => setUpgrading(null) },
       };
 
       const rzp = new window.Razorpay(options);
@@ -154,6 +166,9 @@ export default function Dashboard() {
   if (loading) return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   if (!user) return null;
 
+  const currentPlan = profile?.plan || "free";
+  const limits = PLAN_LIMITS[currentPlan] || PLAN_LIMITS.free;
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -165,12 +180,67 @@ export default function Dashboard() {
               <p className="text-muted-foreground mt-1">
                 Welcome, {profile?.display_name || user.email}
                 {profile?.plan && (
-                  <Badge variant="secondary" className="ml-2 capitalize">{profile.plan}</Badge>
+                  <Badge variant="secondary" className="ml-2 capitalize">{profile.plan === "basic" ? "AI Basic" : profile.plan === "pro" ? "AI Pro" : profile.plan}</Badge>
                 )}
               </p>
             </div>
             <Button variant="outline" onClick={signOut}><LogOut className="mr-2 h-4 w-4" /> Sign Out</Button>
           </div>
+
+          {/* AI Usage Card - only for paid plans */}
+          {currentPlan !== "free" && (
+            <Card className="mb-6">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" /> AI Usage Today
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <Brain className="h-4 w-4" /> Summaries
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {aiUsage.summaries_used} / {limits.summaries}
+                      </span>
+                    </div>
+                    <Progress value={(aiUsage.summaries_used / limits.summaries) * 100} className="h-2" />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {Math.max(0, limits.summaries - aiUsage.summaries_used)} summaries left today
+                    </p>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <MessageCircle className="h-4 w-4" /> Chats
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {aiUsage.chats_used} / {limits.chats}
+                      </span>
+                    </div>
+                    <Progress value={(aiUsage.chats_used / limits.chats) * 100} className="h-2" />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {Math.max(0, limits.chats - aiUsage.chats_used)} chats left today
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Free plan upgrade prompt */}
+          {currentPlan === "free" && (
+            <Card className="mb-6 border-primary/30 bg-primary/5">
+              <CardContent className="py-6 text-center">
+                <Sparkles className="mx-auto h-8 w-8 text-primary mb-2" />
+                <h3 className="font-semibold text-foreground mb-1">Upgrade to use AI features</h3>
+                <p className="text-sm text-muted-foreground mb-3">AI summaries, chat with PDFs, and more — starting at ₹99/month</p>
+                <Button onClick={() => setActiveTab("plans")}>View Plans</Button>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="flex gap-2 mb-6">
             <Button variant={activeTab === "history" ? "default" : "outline"} onClick={() => setActiveTab("history")}>
@@ -235,15 +305,21 @@ export default function Dashboard() {
           )}
 
           {activeTab === "plans" && (
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               {plans.map((plan) => {
-                const isCurrent = plan.id === profile?.plan;
-                const isPopular = plan.id === "pro";
+                const isCurrent = plan.id === currentPlan;
+                const isPopular = plan.id === "basic";
+                const isBestValue = plan.id === "pro";
                 return (
-                  <Card key={plan.id} className={`relative ${isCurrent ? "border-primary ring-2 ring-primary/20" : ""} ${isPopular ? "shadow-lg scale-105" : ""}`}>
+                  <Card key={plan.id} className={`relative ${isCurrent ? "border-primary ring-2 ring-primary/20" : ""} ${isPopular ? "shadow-lg" : ""}`}>
                     {isPopular && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                         <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
+                      </div>
+                    )}
+                    {isBestValue && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <Badge className="bg-accent text-accent-foreground">Best Value</Badge>
                       </div>
                     )}
                     <CardHeader>

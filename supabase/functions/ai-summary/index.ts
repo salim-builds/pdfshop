@@ -6,6 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const PLAN_LIMITS: Record<string, { summaries: number; maxChars: number; maxTokens: number }> = {
+  free: { summaries: 0, maxChars: 0, maxTokens: 0 },
+  basic: { summaries: 15, maxChars: 3000, maxTokens: 250 },
+  pro: { summaries: 80, maxChars: 15000, maxTokens: 500 },
+  business: { summaries: 150, maxChars: 30000, maxTokens: 800 },
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -22,36 +29,50 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Unauthorized");
 
-    const { text, isPremium } = await req.json();
-    if (!text || typeof text !== "string") throw new Error("Missing text field");
+    // Get user plan
+    const { data: profile } = await supabase.from("profiles").select("plan").eq("user_id", user.id).single();
+    const plan = profile?.plan || "free";
+    const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
 
-    // Check usage limits for free users
-    if (!isPremium) {
-      const today = new Date().toISOString().split("T")[0];
-      const { data: usage } = await supabase
-        .from("ai_usage")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("usage_date", today)
-        .maybeSingle();
-
-      if (usage && usage.summaries_used >= 3) {
-        return new Response(JSON.stringify({ error: "limit_reached", message: "Free limit reached. Upgrade to continue." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Upsert usage
-      if (usage) {
-        await supabase.from("ai_usage").update({ summaries_used: usage.summaries_used + 1 }).eq("id", usage.id);
-      } else {
-        await supabase.from("ai_usage").insert({ user_id: user.id, usage_date: today, summaries_used: 1 });
-      }
+    // Block free users
+    if (plan === "free") {
+      return new Response(JSON.stringify({ error: "upgrade_required", message: "Upgrade to use AI features." }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Truncate text for cost control
-    const maxChars = isPremium ? 15000 : 3000;
-    const truncatedText = text.slice(0, maxChars);
+    const { text } = await req.json();
+    if (!text || typeof text !== "string") throw new Error("Missing text field");
+
+    // Check daily usage limits
+    const today = new Date().toISOString().split("T")[0];
+    const { data: usage } = await supabase
+      .from("ai_usage")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("usage_date", today)
+      .maybeSingle();
+
+    if (usage && usage.summaries_used >= limits.summaries) {
+      return new Response(JSON.stringify({
+        error: "limit_reached",
+        message: `Daily AI limit reached (${limits.summaries} summaries). Upgrade your plan for more.`,
+        summaries_used: usage.summaries_used,
+        summaries_limit: limits.summaries,
+      }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Upsert usage
+    if (usage) {
+      await supabase.from("ai_usage").update({ summaries_used: usage.summaries_used + 1 }).eq("id", usage.id);
+    } else {
+      await supabase.from("ai_usage").insert({ user_id: user.id, usage_date: today, summaries_used: 1 });
+    }
+
+    // Truncate text based on plan
+    const truncatedText = text.slice(0, limits.maxChars);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -68,7 +89,7 @@ serve(async (req) => {
           { role: "system", content: "You are a PDF summarizer. Create a concise summary using bullet points. Be brief and actionable. Max 5-7 bullet points." },
           { role: "user", content: `Summarize this PDF content:\n\n${truncatedText}` },
         ],
-        max_tokens: 300,
+        max_tokens: limits.maxTokens,
       }),
     });
 
@@ -82,7 +103,13 @@ serve(async (req) => {
     const result = await aiResponse.json();
     const summary = result.choices?.[0]?.message?.content || "Could not generate summary.";
 
-    return new Response(JSON.stringify({ summary }), {
+    // Return remaining usage info
+    const summariesUsed = (usage?.summaries_used || 0) + 1;
+
+    return new Response(JSON.stringify({
+      summary,
+      usage: { summaries_used: summariesUsed, summaries_limit: limits.summaries },
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

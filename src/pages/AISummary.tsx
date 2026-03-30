@@ -15,6 +15,12 @@ import { Brain, Sparkles, Lock, Zap, Crown } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { recordFileHistory } from "@/hooks/useFileHistory";
 
+const PLAN_PAGE_LIMITS: Record<string, number> = {
+  basic: 2,
+  pro: 50,
+  business: 100,
+};
+
 export default function AISummary() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -23,14 +29,15 @@ export default function AISummary() {
   const [progress, setProgress] = useState(0);
   const [summary, setSummary] = useState<string | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
+  const [userPlan, setUserPlan] = useState("free");
+  const [usageInfo, setUsageInfo] = useState<{ summaries_used: number; summaries_limit: number } | null>(null);
 
   const checkPlan = useCallback(async () => {
-    if (!user) return false;
+    if (!user) return "free";
     const { data } = await supabase.from("profiles").select("plan").eq("user_id", user.id).single();
-    const premium = data?.plan === "pro" || data?.plan === "business";
-    setIsPremium(premium);
-    return premium;
+    const plan = data?.plan || "free";
+    setUserPlan(plan);
+    return plan;
   }, [user]);
 
   const extractTextFromPDF = async (file: File, maxPages: number): Promise<string> => {
@@ -39,12 +46,9 @@ export default function AISummary() {
     const totalPages = pdfDoc.getPageCount();
     const pagesToProcess = Math.min(totalPages, maxPages);
 
-    // pdf-lib doesn't extract text; we read raw content streams
-    // Use a simpler approach: extract bytes and decode
     const uint8 = new Uint8Array(arrayBuffer);
     const rawText = new TextDecoder("utf-8", { fatal: false }).decode(uint8);
 
-    // Extract readable text segments between BT/ET markers or plain text
     const textChunks: string[] = [];
     const regex = /\(([^)]+)\)/g;
     let match;
@@ -54,13 +58,10 @@ export default function AISummary() {
     }
 
     let extracted = textChunks.join(" ");
-
-    // If text extraction is minimal, use raw readable characters
     if (extracted.length < 100) {
       extracted = rawText.replace(/[^\x20-\x7E\n]/g, " ").replace(/\s+/g, " ").trim();
     }
 
-    // Limit to approximate first N pages worth of text
     const charsPerPage = Math.floor(extracted.length / Math.max(totalPages, 1));
     const maxChars = charsPerPage * pagesToProcess;
     return extracted.slice(0, Math.max(maxChars, 3000));
@@ -78,26 +79,36 @@ export default function AISummary() {
     setSummary(null);
 
     try {
-      const premium = await checkPlan();
+      const plan = await checkPlan();
       setProgress(20);
 
-      const maxPages = premium ? 50 : 2;
+      if (plan === "free") {
+        setShowUpgrade(true);
+        setProcessing(false);
+        return;
+      }
+
+      const maxPages = PLAN_PAGE_LIMITS[plan] || 2;
       const text = await extractTextFromPDF(files[0], maxPages);
       setProgress(40);
 
-      if (!premium) {
-        // Artificial delay for free users
-        await new Promise((r) => setTimeout(r, 3000));
+      if (plan === "basic") {
+        await new Promise((r) => setTimeout(r, 2000));
       }
       setProgress(60);
 
       const { data, error } = await supabase.functions.invoke("ai-summary", {
-        body: { text, isPremium: premium },
+        body: { text },
       });
 
       setProgress(90);
 
       if (error) throw error;
+      if (data?.error === "upgrade_required") {
+        setShowUpgrade(true);
+        setProcessing(false);
+        return;
+      }
       if (data?.error === "limit_reached") {
         setShowUpgrade(true);
         setProcessing(false);
@@ -106,6 +117,7 @@ export default function AISummary() {
       if (data?.error) throw new Error(data.error);
 
       setSummary(data.summary);
+      if (data.usage) setUsageInfo(data.usage);
       await recordFileHistory("ai-summary", files[0].name, files[0].size);
       setProgress(100);
     } catch (e: any) {
@@ -114,6 +126,8 @@ export default function AISummary() {
       setProcessing(false);
     }
   };
+
+  const isPaid = userPlan !== "free";
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -126,9 +140,14 @@ export default function AISummary() {
             </div>
             <h1 className="text-3xl font-bold text-foreground">AI PDF Summary</h1>
             <p className="mt-2 text-muted-foreground">Get a concise, AI-powered summary of your PDF</p>
-            {!isPremium && (
+            {!isPaid && (
               <Badge variant="secondary" className="mt-2">
-                <Zap className="mr-1 h-3 w-3" /> Free: 3 summaries/day · First 2 pages
+                <Lock className="mr-1 h-3 w-3" /> Paid plan required
+              </Badge>
+            )}
+            {isPaid && usageInfo && (
+              <Badge variant="secondary" className="mt-2">
+                <Zap className="mr-1 h-3 w-3" /> {usageInfo.summaries_limit - usageInfo.summaries_used} summaries left today
               </Badge>
             )}
           </div>
@@ -141,16 +160,16 @@ export default function AISummary() {
                   <Button size="lg" onClick={handleProcess}>
                     <Sparkles className="mr-2 h-4 w-4" /> Generate Summary
                   </Button>
-                  {!isPremium && (
+                  {userPlan === "basic" && (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      ⚡ Processing first 2 pages for faster results
+                      ⚡ Processing first 2 pages on Basic plan
                     </p>
                   )}
                 </div>
               )}
               {processing && (
                 <div className="mt-6">
-                  <ProcessingBar progress={progress} status="processing" message={!isPremium ? "Processing first 2 pages for faster results..." : "Analyzing your PDF..."} />
+                  <ProcessingBar progress={progress} status="processing" message={userPlan === "basic" ? "Processing first 2 pages..." : "Analyzing your PDF..."} />
                 </div>
               )}
             </>
@@ -162,16 +181,14 @@ export default function AISummary() {
                 <div className="flex items-center gap-2 mb-4">
                   <Brain className="h-5 w-5 text-primary" />
                   <h3 className="font-semibold text-foreground">AI Summary</h3>
-                </div>
-                <div className={`prose prose-sm max-w-none text-foreground ${!isPremium ? "relative" : ""}`}>
-                  <div className="whitespace-pre-wrap">{summary}</div>
-                  {!isPremium && (
-                    <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent flex items-end justify-center pb-2">
-                      <Button variant="outline" size="sm" onClick={() => setShowUpgrade(true)}>
-                        <Crown className="mr-1 h-3 w-3" /> Unlock full PDF analysis with Premium
-                      </Button>
-                    </div>
+                  {usageInfo && (
+                    <Badge variant="outline" className="ml-auto text-xs">
+                      {usageInfo.summaries_limit - usageInfo.summaries_used} left today
+                    </Badge>
                   )}
+                </div>
+                <div className="prose prose-sm max-w-none text-foreground">
+                  <div className="whitespace-pre-wrap">{summary}</div>
                 </div>
                 <div className="mt-6 flex gap-2">
                   <Button variant="outline" onClick={() => { setSummary(null); setFiles([]); }}>
@@ -188,19 +205,23 @@ export default function AISummary() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Crown className="h-5 w-5 text-primary" /> Upgrade to Premium
+              <Crown className="h-5 w-5 text-primary" /> {userPlan === "free" ? "Upgrade to use AI" : "Upgrade for more"}
             </DialogTitle>
-            <DialogDescription>Unlock the full power of AI PDF tools</DialogDescription>
+            <DialogDescription>
+              {userPlan === "free"
+                ? "AI features require a paid plan. Start with AI Basic at ₹99/month."
+                : "You've reached your daily limit. Upgrade for more AI usage."}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-4">
-            <div className="flex items-center gap-2 text-sm"><Sparkles className="h-4 w-4 text-primary" /> Unlimited AI summaries</div>
-            <div className="flex items-center gap-2 text-sm"><Sparkles className="h-4 w-4 text-primary" /> Unlimited AI chat</div>
-            <div className="flex items-center gap-2 text-sm"><Zap className="h-4 w-4 text-primary" /> Faster processing (no delay)</div>
-            <div className="flex items-center gap-2 text-sm"><Lock className="h-4 w-4 text-primary" /> Full document analysis (all pages)</div>
+            <div className="flex items-center gap-2 text-sm"><Sparkles className="h-4 w-4 text-primary" /> AI-powered PDF summaries</div>
+            <div className="flex items-center gap-2 text-sm"><Sparkles className="h-4 w-4 text-primary" /> AI chat with PDFs</div>
+            <div className="flex items-center gap-2 text-sm"><Zap className="h-4 w-4 text-primary" /> Fast processing</div>
+            <div className="flex items-center gap-2 text-sm"><Lock className="h-4 w-4 text-primary" /> Full document analysis</div>
           </div>
           <div className="flex gap-2">
-            <Button className="flex-1" onClick={() => navigate("/dashboard")}>
-              View Plans — ₹199/mo
+            <Button className="flex-1" onClick={() => navigate("/pricing")}>
+              View Plans
             </Button>
             <Button variant="outline" onClick={() => setShowUpgrade(false)}>Later</Button>
           </div>
