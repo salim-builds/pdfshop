@@ -29,13 +29,14 @@ serve(async (req) => {
     }
 
     const { plan_id } = await req.json();
-    if (!plan_id || !["pro", "business"].includes(plan_id)) {
+    if (!plan_id || !["basic", "pro", "business"].includes(plan_id)) {
       return new Response(JSON.stringify({ error: "Invalid plan" }), { status: 400, headers: corsHeaders });
     }
 
     const amounts: Record<string, number> = {
-      pro: 19900,     // ₹199 in paise
-      business: 29900, // ₹299 in paise
+      basic: 9900,     // ₹99 in paise
+      pro: 29900,      // ₹299 in paise
+      business: 49900, // ₹499 in paise
     };
 
     const keyId = Deno.env.get("RAZORPAY_KEY_ID")!;
