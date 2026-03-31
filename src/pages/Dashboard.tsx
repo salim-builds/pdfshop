@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { LogOut, FileText, Clock, CreditCard, Trash2, Loader2, CheckCircle, Brain, MessageCircle, Sparkles } from "lucide-react";
+import { LogOut, FileText, Clock, CreditCard, Trash2, Loader2, CheckCircle, Brain, MessageCircle, Sparkles, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 declare global {
