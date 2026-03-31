@@ -18,6 +18,9 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import AISummary from "./pages/AISummary";
 import AIChatPDF from "./pages/AIChatPDF";
+import AITranslate from "./pages/AITranslate";
+import AISearch from "./pages/AISearch";
+import AIInsights from "./pages/AIInsights";
 import Pricing from "./pages/Pricing";
 
 const queryClient = new QueryClient();
@@ -35,6 +38,9 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/ai-summary" element={<AISummary />} />
             <Route path="/ai-chat" element={<AIChatPDF />} />
+            <Route path="/ai-translate" element={<AITranslate />} />
+            <Route path="/ai-search" element={<AISearch />} />
+            <Route path="/ai-insights" element={<AIInsights />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/merge" element={<MergePDF />} />
             <Route path="/split" element={<SplitPDF />} />
