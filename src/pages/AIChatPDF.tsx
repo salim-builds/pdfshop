@@ -123,7 +123,13 @@ export default function AIChatPDF() {
       if (data?.error) throw new Error(data.error);
 
       setMessages((prev) => [...prev, { role: "assistant", content: data.answer }]);
-      if (data.usage) setUsageInfo(data.usage);
+      if (data.usage) {
+        setUsageInfo(data.usage);
+        if (data.usage.warning) {
+          const remaining = data.usage.chats_limit - data.usage.chats_used;
+          toast({ title: "⚠️ Usage Warning", description: `You have only ${remaining} AI chats left today. Upgrade for more.` });
+        }
+      }
     } catch (e: any) {
       toast({ title: "Error", description: e.message || "Failed to get answer", variant: "destructive" });
     } finally {
