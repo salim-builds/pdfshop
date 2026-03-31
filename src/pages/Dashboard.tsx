@@ -230,6 +230,28 @@ export default function Dashboard() {
             </Card>
           )}
 
+          {/* 80% usage warning banner */}
+          {currentPlan !== "free" && (
+            (aiUsage.summaries_used >= Math.floor(limits.summaries * 0.8) || aiUsage.chats_used >= Math.floor(limits.chats * 0.8)) && (
+              <div className="mb-6 flex items-center gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3">
+                <AlertTriangle className="h-5 w-5 shrink-0 text-yellow-600 dark:text-yellow-400" />
+                <div className="flex-1 text-sm">
+                  <span className="font-medium text-yellow-800 dark:text-yellow-300">You're running low on AI usage today. </span>
+                  <span className="text-yellow-700 dark:text-yellow-400">
+                    {aiUsage.summaries_used >= Math.floor(limits.summaries * 0.8) &&
+                      `${Math.max(0, limits.summaries - aiUsage.summaries_used)} summaries left. `}
+                    {aiUsage.chats_used >= Math.floor(limits.chats * 0.8) &&
+                      `${Math.max(0, limits.chats - aiUsage.chats_used)} chats left. `}
+                    Upgrade for higher limits.
+                  </span>
+                </div>
+                <Button size="sm" variant="outline" className="shrink-0 border-yellow-500/50 text-yellow-700 hover:bg-yellow-500/20 dark:text-yellow-300" onClick={() => setActiveTab("plans")}>
+                  Upgrade
+                </Button>
+              </div>
+            )
+          )}
+
           {/* Free plan upgrade prompt */}
           {currentPlan === "free" && (
             <Card className="mb-6 border-primary/30 bg-primary/5">
