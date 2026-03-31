@@ -105,10 +105,12 @@ serve(async (req) => {
 
     // Return remaining usage info
     const summariesUsed = (usage?.summaries_used || 0) + 1;
+    const threshold80 = Math.floor(limits.summaries * 0.8);
+    const nearingLimit = summariesUsed >= threshold80 && summariesUsed < limits.summaries;
 
     return new Response(JSON.stringify({
       summary,
-      usage: { summaries_used: summariesUsed, summaries_limit: limits.summaries },
+      usage: { summaries_used: summariesUsed, summaries_limit: limits.summaries, warning: nearingLimit },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
