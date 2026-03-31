@@ -117,7 +117,13 @@ export default function AISummary() {
       if (data?.error) throw new Error(data.error);
 
       setSummary(data.summary);
-      if (data.usage) setUsageInfo(data.usage);
+      if (data.usage) {
+        setUsageInfo(data.usage);
+        if (data.usage.warning) {
+          const remaining = data.usage.summaries_limit - data.usage.summaries_used;
+          toast({ title: "⚠️ Usage Warning", description: `You have only ${remaining} AI summaries left today. Upgrade for more.` });
+        }
+      }
       await recordFileHistory("ai-summary", files[0].name, files[0].size);
       setProgress(100);
     } catch (e: any) {
