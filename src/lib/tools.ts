@@ -69,6 +69,9 @@ export const tools: PDFTool[] = [
   { id: "pdf-reader", name: "PDF Reader", description: "View PDF files online", icon: BookOpen, category: "edit", path: "/pdf-reader" },
   { id: "ai-summary", name: "AI PDF Summary", description: "Get AI-powered PDF summary", icon: Brain, category: "ai", path: "/ai-summary" },
   { id: "ai-chat", name: "AI Chat with PDF", description: "Chat with your PDF using AI", icon: MessageCircle, category: "ai", path: "/ai-chat" },
+  { id: "ai-translate", name: "Translate PDF", description: "Translate PDF content to any language", icon: Languages, category: "ai", path: "/ai-translate" },
+  { id: "ai-search", name: "Smart Search", description: "AI-powered search in your PDF", icon: Search, category: "ai", path: "/ai-search" },
+  { id: "ai-insights", name: "AI Insights", description: "Extract key points & highlights", icon: Lightbulb, category: "ai", path: "/ai-insights" },
 ];
 
 export const getToolsByCategory = (category: ToolCategory) =>
