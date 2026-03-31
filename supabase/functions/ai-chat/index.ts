@@ -103,10 +103,12 @@ serve(async (req) => {
     const answer = result.choices?.[0]?.message?.content || "Could not generate answer.";
 
     const chatsUsed = (usage?.chats_used || 0) + 1;
+    const threshold80 = Math.floor(limits.chats * 0.8);
+    const nearingLimit = chatsUsed >= threshold80 && chatsUsed < limits.chats;
 
     return new Response(JSON.stringify({
       answer,
-      usage: { chats_used: chatsUsed, chats_limit: limits.chats },
+      usage: { chats_used: chatsUsed, chats_limit: limits.chats, warning: nearingLimit },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
