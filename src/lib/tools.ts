@@ -2,7 +2,7 @@ import {
   FileText, Scissors, Minimize2, FileOutput, Table, Presentation,
   Image, FileInput, Droplets, RotateCw, Lock, Unlock, FileType,
   Stamp, PenTool, Hash, Layers, BookOpen, ScanLine, FileSearch,
-  Brain, MessageCircle
+  Brain, MessageCircle, Languages, Search, Lightbulb
 } from "lucide-react";
 
 export type ToolCategory = "organize" | "optimize" | "convert-to" | "convert-from" | "edit" | "security" | "ai";
