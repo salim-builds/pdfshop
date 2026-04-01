@@ -22,6 +22,17 @@ import AITranslate from "./pages/AITranslate";
 import AISearch from "./pages/AISearch";
 import AIInsights from "./pages/AIInsights";
 import Pricing from "./pages/Pricing";
+import RemovePages from "./pages/RemovePages";
+import ExtractPages from "./pages/ExtractPages";
+import ReorderPages from "./pages/ReorderPages";
+import RepairPDF from "./pages/RepairPDF";
+import ComparePDF from "./pages/ComparePDF";
+import ConvertPDFA from "./pages/ConvertPDFA";
+import HTMLtoPDF from "./pages/HTMLtoPDF";
+import ScanToPDF from "./pages/ScanToPDF";
+import CropPDF from "./pages/CropPDF";
+import RedactPDF from "./pages/RedactPDF";
+import AdvancedPermissions from "./pages/AdvancedPermissions";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +60,17 @@ const App = () => (
             <Route path="/watermark" element={<WatermarkPDF />} />
             <Route path="/protect" element={<ProtectPDF />} />
             <Route path="/jpg-to-pdf" element={<JPGtoPDF />} />
+            <Route path="/remove-pages" element={<RemovePages />} />
+            <Route path="/extract-pages" element={<ExtractPages />} />
+            <Route path="/reorder-pages" element={<ReorderPages />} />
+            <Route path="/repair" element={<RepairPDF />} />
+            <Route path="/compare" element={<ComparePDF />} />
+            <Route path="/convert-pdfa" element={<ConvertPDFA />} />
+            <Route path="/html-to-pdf" element={<HTMLtoPDF />} />
+            <Route path="/scan-to-pdf" element={<ScanToPDF />} />
+            <Route path="/crop" element={<CropPDF />} />
+            <Route path="/redact" element={<RedactPDF />} />
+            <Route path="/permissions" element={<AdvancedPermissions />} />
             <Route path="/pdf-to-word" element={<PlaceholderTool title="PDF to Word" description="Convert PDF documents to editable Word files" accentClass="text-convert-from" />} />
             <Route path="/pdf-to-excel" element={<PlaceholderTool title="PDF to Excel" description="Convert PDF tables to Excel spreadsheets" accentClass="text-convert-from" />} />
             <Route path="/pdf-to-ppt" element={<PlaceholderTool title="PDF to PowerPoint" description="Convert PDF to presentation slides" accentClass="text-convert-from" />} />
