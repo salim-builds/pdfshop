@@ -77,7 +77,7 @@ export default function ScanToPDF() {
           page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
         } else {
           // Apply rotation via page rotation
-          page.setRotation({ type: "degrees" as const, angle: rotation });
+          page.setRotation({ type: "degrees" as any, angle: rotation } as any);
           page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
         }
 
