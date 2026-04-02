@@ -13,6 +13,7 @@ export default function ExtractPages() {
   const [status, setStatus] = useState<"idle" | "processing" | "done" | "error">("idle");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [extractedCount, setExtractedCount] = useState(0);
 
   const handleFilesChange = useCallback(async (newFiles: File[]) => {
     setFiles(newFiles);
@@ -63,17 +64,35 @@ export default function ExtractPages() {
 
       const newDoc = await PDFDocument.create();
       const indices = pagesToExtract.map((p) => p - 1);
-      const copied = await newDoc.copyPages(doc, indices);
-      copied.forEach((page) => newDoc.addPage(page));
-      setProgress(80);
+
+      for (let i = 0; i < indices.length; i++) {
+        const [copied] = await newDoc.copyPages(doc, [indices[i]]);
+        newDoc.addPage(copied);
+        setProgress(30 + ((i + 1) / indices.length) * 60);
+      }
 
       const pdfBytes = await newDoc.save();
       const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
       setResultUrl(URL.createObjectURL(blob));
+      setExtractedCount(pagesToExtract.length);
       setProgress(100);
       setStatus("done");
     } catch { setErrorMsg("Failed to process PDF"); setStatus("error"); }
   }, [files, pageInput]);
+
+  const selectedPages = parsePages(pageInput);
+  const pageButtons = totalPages > 0 && totalPages <= 20
+    ? Array.from({ length: totalPages }, (_, i) => i + 1)
+    : [];
+
+  const togglePage = (p: number) => {
+    const current = parsePages(pageInput);
+    if (current.includes(p)) {
+      setPageInput(current.filter(x => x !== p).join(", "));
+    } else {
+      setPageInput([...current, p].sort((a, b) => a - b).join(", "));
+    }
+  };
 
   return (
     <ToolLayout title="Extract Pages" description="Extract specific pages into a new PDF" accentClass="text-organize">
@@ -81,7 +100,26 @@ export default function ExtractPages() {
 
       {files.length === 1 && status === "idle" && (
         <div className="mt-6 flex flex-col items-center gap-4">
-          {totalPages > 0 && <p className="text-sm text-muted-foreground">Total pages: {totalPages}</p>}
+          {totalPages > 0 && <p className="text-sm text-muted-foreground">Total pages: <span className="font-semibold text-foreground">{totalPages}</span></p>}
+
+          {pageButtons.length > 0 && (
+            <div className="flex flex-wrap gap-2 justify-center max-w-lg">
+              {pageButtons.map(p => (
+                <button
+                  key={p}
+                  onClick={() => togglePage(p)}
+                  className={`h-10 w-10 rounded-lg text-sm font-medium transition-colors border ${
+                    selectedPages.includes(p)
+                      ? "bg-organize text-background border-organize"
+                      : "bg-background text-foreground border-border hover:border-organize/50"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          )}
+
           <input
             type="text"
             value={pageInput}
@@ -90,16 +128,22 @@ export default function ExtractPages() {
             className="w-80 rounded-lg border border-border bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-organize focus:outline-none focus:ring-1 focus:ring-organize"
           />
           <button onClick={handleExtract} disabled={!pageInput.trim()} className="rounded-lg bg-organize px-8 py-3 text-sm font-semibold text-background transition-colors hover:bg-organize/90 disabled:opacity-50">
-            Extract Pages
+            Extract {selectedPages.length > 0 ? `${selectedPages.length} Page${selectedPages.length > 1 ? "s" : ""}` : "Pages"}
           </button>
           {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
         </div>
       )}
 
-      <ProcessingBar progress={progress} status={status} />
+      <ProcessingBar progress={progress} status={status} message={status === "processing" ? "Extracting pages..." : undefined} />
+
+      {status === "done" && extractedCount > 0 && (
+        <p className="mt-2 text-center text-sm text-optimize">
+          Extracted {extractedCount} page{extractedCount > 1 ? "s" : ""} into a new PDF.
+        </p>
+      )}
 
       {resultUrl && (
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <a href={resultUrl} download="extracted_pages.pdf" className="inline-flex items-center gap-2 rounded-lg bg-optimize px-8 py-3 text-sm font-semibold text-background transition-colors hover:bg-optimize/90">
             <Download className="h-4 w-4" /> Download PDF
           </a>
