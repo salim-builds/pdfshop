@@ -13,12 +13,14 @@ export default function RemovePages() {
   const [status, setStatus] = useState<"idle" | "processing" | "done" | "error">("idle");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [removedCount, setRemovedCount] = useState(0);
 
   const handleFilesChange = useCallback(async (newFiles: File[]) => {
     setFiles(newFiles);
     setStatus("idle");
     setResultUrl(null);
     setErrorMsg("");
+    setRemovedCount(0);
     if (newFiles[0]) {
       try {
         const bytes = await newFiles[0].arrayBuffer();
@@ -82,13 +84,16 @@ export default function RemovePages() {
       const keepIndices = Array.from({ length: count }, (_, i) => i)
         .filter((i) => !pagesToRemove.includes(i + 1));
 
-      const copiedPages = await newDoc.copyPages(doc, keepIndices);
-      copiedPages.forEach((page) => newDoc.addPage(page));
-      setProgress(80);
+      for (let i = 0; i < keepIndices.length; i++) {
+        const [copied] = await newDoc.copyPages(doc, [keepIndices[i]]);
+        newDoc.addPage(copied);
+        setProgress(30 + ((i + 1) / keepIndices.length) * 60);
+      }
 
       const pdfBytes = await newDoc.save();
       const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
       setResultUrl(URL.createObjectURL(blob));
+      setRemovedCount(pagesToRemove.length);
       setProgress(100);
       setStatus("done");
     } catch {
@@ -97,6 +102,22 @@ export default function RemovePages() {
     }
   }, [files, pageInput]);
 
+  // Generate quick page buttons
+  const pageButtons = totalPages > 0 && totalPages <= 20
+    ? Array.from({ length: totalPages }, (_, i) => i + 1)
+    : [];
+
+  const togglePage = (p: number) => {
+    const current = parsePageNumbers(pageInput);
+    if (current.includes(p)) {
+      setPageInput(current.filter(x => x !== p).join(", "));
+    } else {
+      setPageInput([...current, p].sort((a, b) => a - b).join(", "));
+    }
+  };
+
+  const selectedPages = parsePageNumbers(pageInput);
+
   return (
     <ToolLayout title="Remove Pages" description="Remove specific pages from your PDF" accentClass="text-organize">
       <DropZone files={files} onFilesChange={handleFilesChange} accept=".pdf" />
@@ -104,8 +125,27 @@ export default function RemovePages() {
       {files.length === 1 && status === "idle" && (
         <div className="mt-6 flex flex-col items-center gap-4">
           {totalPages > 0 && (
-            <p className="text-sm text-muted-foreground">Total pages: {totalPages}</p>
+            <p className="text-sm text-muted-foreground">Total pages: <span className="font-semibold text-foreground">{totalPages}</span></p>
           )}
+
+          {pageButtons.length > 0 && (
+            <div className="flex flex-wrap gap-2 justify-center max-w-lg">
+              {pageButtons.map(p => (
+                <button
+                  key={p}
+                  onClick={() => togglePage(p)}
+                  className={`h-10 w-10 rounded-lg text-sm font-medium transition-colors border ${
+                    selectedPages.includes(p)
+                      ? "bg-destructive text-destructive-foreground border-destructive"
+                      : "bg-background text-foreground border-border hover:border-organize/50"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          )}
+
           <input
             type="text"
             value={pageInput}
@@ -118,16 +158,22 @@ export default function RemovePages() {
             disabled={!pageInput.trim()}
             className="rounded-lg bg-organize px-8 py-3 text-sm font-semibold text-background transition-colors hover:bg-organize/90 disabled:opacity-50"
           >
-            Remove Pages
+            Remove {selectedPages.length > 0 ? `${selectedPages.length} Page${selectedPages.length > 1 ? "s" : ""}` : "Pages"}
           </button>
           {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
         </div>
       )}
 
-      <ProcessingBar progress={progress} status={status} />
+      <ProcessingBar progress={progress} status={status} message={status === "processing" ? "Removing pages..." : undefined} />
+
+      {status === "done" && removedCount > 0 && (
+        <p className="mt-2 text-center text-sm text-optimize">
+          Removed {removedCount} page{removedCount > 1 ? "s" : ""}. New PDF has {totalPages - removedCount} pages.
+        </p>
+      )}
 
       {resultUrl && (
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <a href={resultUrl} download="pages_removed.pdf" className="inline-flex items-center gap-2 rounded-lg bg-optimize px-8 py-3 text-sm font-semibold text-background transition-colors hover:bg-optimize/90">
             <Download className="h-4 w-4" /> Download PDF
           </a>

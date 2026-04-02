@@ -14,6 +14,7 @@ export default function CropPDF() {
   const [status, setStatus] = useState<"idle" | "processing" | "done" | "error">("idle");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [totalPages, setTotalPages] = useState(0);
+  const [pageSize, setPageSize] = useState({ width: 0, height: 0 });
 
   const handleFilesChange = useCallback(async (newFiles: File[]) => {
     setFiles(newFiles);
@@ -24,7 +25,11 @@ export default function CropPDF() {
         const bytes = await newFiles[0].arrayBuffer();
         const doc = await PDFDocument.load(bytes);
         setTotalPages(doc.getPageCount());
-      } catch { setTotalPages(0); }
+        if (doc.getPageCount() > 0) {
+          const { width, height } = doc.getPage(0).getSize();
+          setPageSize({ width: Math.round(width), height: Math.round(height) });
+        }
+      } catch { setTotalPages(0); setPageSize({ width: 0, height: 0 }); }
     }
   }, []);
 
@@ -56,19 +61,17 @@ export default function CropPDF() {
       const targetPages = parsePages(customPages, count);
       setProgress(40);
 
-      targetPages.forEach((idx) => {
+      targetPages.forEach((idx, i) => {
         const page = doc.getPage(idx);
         const { width, height } = page.getSize();
-        const cropBox = {
-          x: margins.left,
-          y: margins.bottom,
-          width: width - margins.left - margins.right,
-          height: height - margins.top - margins.bottom,
-        };
-        page.setCropBox(cropBox.x, cropBox.y, cropBox.width, cropBox.height);
+        const newX = margins.left;
+        const newY = margins.bottom;
+        const newW = Math.max(1, width - margins.left - margins.right);
+        const newH = Math.max(1, height - margins.top - margins.bottom);
+        page.setCropBox(newX, newY, newW, newH);
+        setProgress(40 + ((i + 1) / targetPages.length) * 50);
       });
 
-      setProgress(80);
       const pdfBytes = await doc.save();
       const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
       setResultUrl(URL.createObjectURL(blob));
@@ -77,13 +80,43 @@ export default function CropPDF() {
     } catch { setStatus("error"); }
   }, [files, margins, applyTo, customPages]);
 
+  const presetMargins = [
+    { label: "None", values: { top: 0, right: 0, bottom: 0, left: 0 } },
+    { label: "Small (10pt)", values: { top: 10, right: 10, bottom: 10, left: 10 } },
+    { label: "Medium (36pt)", values: { top: 36, right: 36, bottom: 36, left: 36 } },
+    { label: "Large (72pt)", values: { top: 72, right: 72, bottom: 72, left: 72 } },
+  ];
+
   return (
     <ToolLayout title="Crop PDF" description="Crop margins from your PDF pages" accentClass="text-edit">
       <DropZone files={files} onFilesChange={handleFilesChange} accept=".pdf" />
 
       {files.length === 1 && status === "idle" && (
         <div className="mt-6 mx-auto max-w-md space-y-4">
-          {totalPages > 0 && <p className="text-sm text-muted-foreground text-center">Total pages: {totalPages}</p>}
+          {totalPages > 0 && (
+            <div className="text-center space-y-1">
+              <p className="text-sm text-muted-foreground">Total pages: <span className="font-semibold text-foreground">{totalPages}</span></p>
+              {pageSize.width > 0 && (
+                <p className="text-xs text-muted-foreground">Page size: {pageSize.width} × {pageSize.height} pts</p>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2 justify-center">
+            {presetMargins.map(preset => (
+              <button
+                key={preset.label}
+                onClick={() => setMargins(preset.values)}
+                className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  JSON.stringify(margins) === JSON.stringify(preset.values)
+                    ? "border-edit bg-edit/10 text-edit"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             {(["top", "right", "bottom", "left"] as const).map((side) => (
@@ -115,7 +148,7 @@ export default function CropPDF() {
         </div>
       )}
 
-      <ProcessingBar progress={progress} status={status} />
+      <ProcessingBar progress={progress} status={status} message={status === "processing" ? "Cropping pages..." : undefined} />
 
       {resultUrl && (
         <div className="mt-6 text-center">

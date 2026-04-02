@@ -2,13 +2,14 @@ import { useState, useCallback, useRef } from "react";
 import { PDFDocument } from "pdf-lib";
 import ToolLayout from "@/components/ToolLayout";
 import ProcessingBar from "@/components/ProcessingBar";
-import { Download, Camera, Upload, X, Image } from "lucide-react";
+import { Download, Camera, Upload, X, RotateCw } from "lucide-react";
 
 export default function ScanToPDF() {
-  const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
+  const [images, setImages] = useState<{ file: File; preview: string; rotation: number }[]>([]);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<"idle" | "processing" | "done" | "error">("idle");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [enhanceContrast, setEnhanceContrast] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -17,6 +18,7 @@ export default function ScanToPDF() {
     const newImages = Array.from(files).map((file) => ({
       file,
       preview: URL.createObjectURL(file),
+      rotation: 0,
     }));
     setImages((prev) => [...prev, ...newImages]);
     setStatus("idle");
@@ -30,10 +32,24 @@ export default function ScanToPDF() {
     });
   };
 
+  const rotateImage = (idx: number) => {
+    setImages(prev => prev.map((img, i) => i === idx ? { ...img, rotation: (img.rotation + 90) % 360 } : img));
+  };
+
+  const moveImage = (from: number, to: number) => {
+    if (to < 0 || to >= images.length) return;
+    setImages(prev => {
+      const copy = [...prev];
+      const [moved] = copy.splice(from, 1);
+      copy.splice(to, 0, moved);
+      return copy;
+    });
+  };
+
   const handleConvert = useCallback(async () => {
     if (images.length === 0) return;
     setStatus("processing");
-    setProgress(10);
+    setProgress(5);
 
     try {
       const doc = await PDFDocument.create();
@@ -49,10 +65,28 @@ export default function ScanToPDF() {
           img = await doc.embedJpg(bytes);
         }
 
-        const page = doc.addPage([img.width, img.height]);
-        page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
-        setProgress(10 + ((i + 1) / images.length) * 80);
+        // Handle rotation
+        const rotation = images[i].rotation;
+        const isRotated = rotation === 90 || rotation === 270;
+        const pageW = isRotated ? img.height : img.width;
+        const pageH = isRotated ? img.width : img.height;
+
+        const page = doc.addPage([pageW, pageH]);
+
+        if (rotation === 0) {
+          page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+        } else {
+          // Apply rotation via page rotation
+          page.setRotation({ type: "degrees" as any, angle: rotation } as any);
+          page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+        }
+
+        setProgress(5 + ((i + 1) / images.length) * 85);
       }
+
+      doc.setProducer("PDFShop.in Scan to PDF");
+      doc.setCreator("PDFShop.in");
+      doc.setCreationDate(new Date());
 
       const pdfBytes = await doc.save();
       const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
@@ -62,10 +96,10 @@ export default function ScanToPDF() {
     } catch {
       setStatus("error");
     }
-  }, [images]);
+  }, [images, enhanceContrast]);
 
   return (
-    <ToolLayout title="Scan to PDF" description="Capture or upload images and convert them to PDF" accentClass="text-convert-to">
+    <ToolLayout title="Scan to PDF" description="Capture or upload images and convert them to PDF" accentClass="text-primary">
       <div className="mx-auto max-w-2xl">
         <div className="flex flex-col items-center gap-4">
           <div className="flex gap-3">
@@ -73,11 +107,11 @@ export default function ScanToPDF() {
               onClick={() => cameraInputRef.current?.click()}
               className="flex items-center gap-2 rounded-lg border border-border bg-background px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             >
-              <Camera className="h-4 w-4 text-convert-to" /> Take Photo
+              <Camera className="h-4 w-4 text-primary" /> Take Photo
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 rounded-lg bg-convert-to px-6 py-3 text-sm font-semibold text-background transition-colors hover:bg-convert-to/90"
+              className="flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               <Upload className="h-4 w-4" /> Upload Images
             </button>
@@ -88,34 +122,44 @@ export default function ScanToPDF() {
         </div>
 
         {images.length > 0 && (
-          <div className="mt-6 grid grid-cols-3 gap-3">
-            {images.map((img, i) => (
-              <div key={i} className="relative group rounded-lg border border-border overflow-hidden">
-                <img src={img.preview} alt={`Scan ${i + 1}`} className="w-full h-32 object-cover" />
-                <button
-                  onClick={() => removeImage(i)}
-                  className="absolute top-1 right-1 rounded-full bg-background/80 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="h-3 w-3 text-foreground" />
-                </button>
-                <div className="absolute bottom-1 left-1 rounded bg-background/80 px-1.5 py-0.5 text-xs text-foreground">
-                  {i + 1}
+          <>
+            <p className="mt-4 text-center text-sm text-muted-foreground">{images.length} image{images.length > 1 ? "s" : ""} selected</p>
+            <div className="mt-3 grid grid-cols-3 gap-3">
+              {images.map((img, i) => (
+                <div key={i} className="relative group rounded-lg border border-border overflow-hidden bg-muted/20">
+                  <img
+                    src={img.preview}
+                    alt={`Scan ${i + 1}`}
+                    className="w-full h-32 object-cover"
+                    style={{ transform: `rotate(${img.rotation}deg)` }}
+                  />
+                  <div className="absolute inset-0 bg-background/0 group-hover:bg-background/40 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+                    <button onClick={() => rotateImage(i)} className="rounded-full bg-background/80 p-1.5 hover:bg-background">
+                      <RotateCw className="h-3.5 w-3.5 text-foreground" />
+                    </button>
+                    <button onClick={() => removeImage(i)} className="rounded-full bg-background/80 p-1.5 hover:bg-destructive/80 hover:text-destructive-foreground">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div className="absolute bottom-1 left-1 rounded bg-background/80 px-1.5 py-0.5 text-xs font-medium text-foreground">
+                    {i + 1}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
 
         {images.length > 0 && status === "idle" && (
           <div className="mt-4 text-center">
-            <button onClick={handleConvert} className="rounded-lg bg-convert-to px-8 py-3 text-sm font-semibold text-background transition-colors hover:bg-convert-to/90">
+            <button onClick={handleConvert} className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
               Create PDF ({images.length} image{images.length > 1 ? "s" : ""})
             </button>
           </div>
         )}
       </div>
 
-      <ProcessingBar progress={progress} status={status} />
+      <ProcessingBar progress={progress} status={status} message={status === "processing" ? "Building PDF from images..." : undefined} />
 
       {resultUrl && (
         <div className="mt-6 text-center">
