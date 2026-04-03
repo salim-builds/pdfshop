@@ -125,17 +125,14 @@ export default function SEOToolPage() {
             </div>
           </section>
 
-          {/* Tool UI Section */}
-          {ToolComponent && (
-            <section className="py-8" aria-label="Tool interface">
-              <Suspense fallback={
-                <div className="container mx-auto max-w-2xl text-center py-20">
-                  <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
-                  <p className="mt-4 text-muted-foreground">Loading tool...</p>
-                </div>
-              }>
-                <ToolComponent />
-              </Suspense>
+          {/* CTA to Tool */}
+          {tool && (
+            <section className="py-8 text-center">
+              <Link to={tool.path}>
+                <Button size="lg" className="text-lg px-8 py-6">
+                  <Upload className="h-5 w-5 mr-2" /> Use {tool.name} Now – It's Free
+                </Button>
+              </Link>
             </section>
           )}
 
