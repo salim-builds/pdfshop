@@ -32,6 +32,7 @@ export default function SEOToolPage() {
 
   if (!seoData) return <Navigate to="/404" replace />;
 
+  const tool = tools.find((t) => t.id === seoData.toolId);
 
 
   const relatedTools = seoData.relatedSlugs
