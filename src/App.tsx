@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { HelmetProvider } from "react-helmet-async";
+import SEOToolPage from "./pages/SEOToolPage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import MergePDF from "./pages/MergePDF";
@@ -37,6 +39,7 @@ import AdvancedPermissions from "./pages/AdvancedPermissions";
 const queryClient = new QueryClient();
 
 const App = () => (
+  <HelmetProvider>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -84,6 +87,7 @@ const App = () => (
             <Route path="/edit-pdf" element={<PlaceholderTool title="Edit PDF" description="Modify text and images in your PDF" accentClass="text-edit" />} />
             <Route path="/sign-pdf" element={<PlaceholderTool title="Sign PDF" description="Add your signature to PDF documents" accentClass="text-edit" />} />
             <Route path="/pdf-reader" element={<PlaceholderTool title="PDF Reader" description="View PDF files online" accentClass="text-edit" />} />
+            <Route path="/tools/:slug" element={<SEOToolPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
@@ -91,6 +95,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </HelmetProvider>
 );
 
 export default App;
