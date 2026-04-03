@@ -1,41 +1,14 @@
 import { useParams, Link, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { lazy, Suspense } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { getSEOToolBySlug, seoTools } from "@/lib/seo-tools";
 import { tools } from "@/lib/tools";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { CheckCircle, Upload, Settings, Download, Shield, Zap, Star, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
 import { useState } from "react";
-
-// Lazy load tool components
-const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
-  merge: lazy(() => import("@/pages/MergePDF")),
-  split: lazy(() => import("@/pages/SplitPDF")),
-  compress: lazy(() => import("@/pages/CompressPDF")),
-  rotate: lazy(() => import("@/pages/RotatePDF")),
-  watermark: lazy(() => import("@/pages/WatermarkPDF")),
-  protect: lazy(() => import("@/pages/ProtectPDF")),
-  "jpg-to-pdf": lazy(() => import("@/pages/JPGtoPDF")),
-  "remove-pages": lazy(() => import("@/pages/RemovePages")),
-  "extract-pages": lazy(() => import("@/pages/ExtractPages")),
-  "reorder-pages": lazy(() => import("@/pages/ReorderPages")),
-  repair: lazy(() => import("@/pages/RepairPDF")),
-  compare: lazy(() => import("@/pages/ComparePDF")),
-  "convert-pdfa": lazy(() => import("@/pages/ConvertPDFA")),
-  "html-to-pdf": lazy(() => import("@/pages/HTMLtoPDF")),
-  "scan-to-pdf": lazy(() => import("@/pages/ScanToPDF")),
-  crop: lazy(() => import("@/pages/CropPDF")),
-  redact: lazy(() => import("@/pages/RedactPDF")),
-  permissions: lazy(() => import("@/pages/AdvancedPermissions")),
-  "ai-summary": lazy(() => import("@/pages/AISummary")),
-  "ai-chat": lazy(() => import("@/pages/AIChatPDF")),
-  "ai-translate": lazy(() => import("@/pages/AITranslate")),
-  "ai-search": lazy(() => import("@/pages/AISearch")),
-  "ai-insights": lazy(() => import("@/pages/AIInsights")),
-};
 
 function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
