@@ -272,6 +272,9 @@ export default function Dashboard() {
             <Button variant={activeTab === "plans" ? "default" : "outline"} onClick={() => setActiveTab("plans")}>
               <CreditCard className="mr-2 h-4 w-4" /> Subscription Plans
             </Button>
+            <Button variant={activeTab === "blog" ? "default" : "outline"} onClick={() => setActiveTab("blog")}>
+              <Sparkles className="mr-2 h-4 w-4" /> Blog Generator
+            </Button>
           </div>
 
           {activeTab === "history" && (
