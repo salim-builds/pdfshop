@@ -90,6 +90,8 @@ const App = () => (
             <Route path="/sign-pdf" element={<PlaceholderTool title="Sign PDF" description="Add your signature to PDF documents" accentClass="text-edit" />} />
             <Route path="/pdf-reader" element={<PlaceholderTool title="PDF Reader" description="View PDF files online" accentClass="text-edit" />} />
             <Route path="/tools/:slug" element={<SEOToolPage />} />
+            <Route path="/blog" element={<BlogList />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
