@@ -382,6 +382,8 @@ export default function Dashboard() {
               })}
             </div>
           )}
+
+          {activeTab === "blog" && <BlogGenerator />}
         </div>
       </main>
       <Footer />
