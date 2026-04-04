@@ -8,6 +8,8 @@ import { HelmetProvider } from "react-helmet-async";
 import SEOToolPage from "./pages/SEOToolPage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import BlogList from "./pages/BlogList";
+import BlogPost from "./pages/BlogPost";
 import MergePDF from "./pages/MergePDF";
 import SplitPDF from "./pages/SplitPDF";
 import CompressPDF from "./pages/CompressPDF";
