@@ -58,7 +58,7 @@ export default function Dashboard() {
   const [history, setHistory] = useState<FileHistoryItem[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [aiUsage, setAiUsage] = useState<AiUsage>({ summaries_used: 0, chats_used: 0 });
-  const [activeTab, setActiveTab] = useState<"history" | "plans">("history");
+  const [activeTab, setActiveTab] = useState<"history" | "plans" | "blog">("history");
   const [upgrading, setUpgrading] = useState<string | null>(null);
 
   useEffect(() => {
