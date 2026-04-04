@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 const categories: ToolCategory[] = ["ai", "organize", "optimize", "convert-to", "convert-from", "edit", "security"];
 
 const navLinks = [
-  { label: "AI Summary", path: "/ai-summary" },
-  { label: "AI Chat", path: "/ai-chat" },
-  { label: "Merge PDF", path: "/merge" },
-  { label: "Compress PDF", path: "/compress" },
+  { label: "AI Summary", path: "/tools/ai-pdf-summary" },
+  { label: "AI Chat", path: "/tools/chat-with-pdf" },
+  { label: "Merge PDF", path: "/tools/merge-pdf" },
+  { label: "Compress PDF", path: "/tools/compress-pdf" },
   { label: "Pricing", path: "/pricing" },
 ];
 

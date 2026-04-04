@@ -790,3 +790,9 @@ export const getSEOToolBySlug = (slug: string): SEOToolData | undefined =>
 
 export const getAllSEOSlugs = (): string[] =>
   seoTools.map((t) => t.slug);
+
+/** Map a tool ID to its SEO slug, if one exists */
+export const getSEOSlugByToolId = (toolId: string): string | undefined => {
+  const entry = seoTools.find((t) => t.toolId === toolId);
+  return entry?.slug;
+};
