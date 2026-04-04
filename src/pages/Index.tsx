@@ -4,7 +4,7 @@ import ToolCard from "@/components/ToolCard";
 import { tools, categoryLabels, categoryColors, type ToolCategory } from "@/lib/tools";
 import { FileText } from "lucide-react";
 
-const categories: ToolCategory[] = ["organize", "optimize", "convert-to", "convert-from", "edit", "security"];
+const categories: ToolCategory[] = ["ai", "organize", "optimize", "convert-to", "convert-from", "edit", "security"];
 
 export default function Index() {
   return (
