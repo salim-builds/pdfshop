@@ -12,6 +12,7 @@ const navLinks = [
   { label: "AI Chat", path: "/tools/chat-with-pdf" },
   { label: "Merge PDF", path: "/tools/merge-pdf" },
   { label: "Compress PDF", path: "/tools/compress-pdf" },
+  { label: "Blog", path: "/blog" },
   { label: "Pricing", path: "/pricing" },
 ];
 

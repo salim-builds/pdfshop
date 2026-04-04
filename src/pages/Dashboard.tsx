@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import BlogGenerator from "@/components/BlogGenerator";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
@@ -57,7 +58,7 @@ export default function Dashboard() {
   const [history, setHistory] = useState<FileHistoryItem[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [aiUsage, setAiUsage] = useState<AiUsage>({ summaries_used: 0, chats_used: 0 });
-  const [activeTab, setActiveTab] = useState<"history" | "plans">("history");
+  const [activeTab, setActiveTab] = useState<"history" | "plans" | "blog">("history");
   const [upgrading, setUpgrading] = useState<string | null>(null);
 
   useEffect(() => {
@@ -271,6 +272,9 @@ export default function Dashboard() {
             <Button variant={activeTab === "plans" ? "default" : "outline"} onClick={() => setActiveTab("plans")}>
               <CreditCard className="mr-2 h-4 w-4" /> Subscription Plans
             </Button>
+            <Button variant={activeTab === "blog" ? "default" : "outline"} onClick={() => setActiveTab("blog")}>
+              <Sparkles className="mr-2 h-4 w-4" /> Blog Generator
+            </Button>
           </div>
 
           {activeTab === "history" && (
@@ -378,6 +382,8 @@ export default function Dashboard() {
               })}
             </div>
           )}
+
+          {activeTab === "blog" && <BlogGenerator />}
         </div>
       </main>
       <Footer />

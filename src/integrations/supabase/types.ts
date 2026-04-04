@@ -44,6 +44,48 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_posts: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          keywords: string[] | null
+          meta_description: string | null
+          reading_time: number | null
+          slug: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          keywords?: string[] | null
+          meta_description?: string | null
+          reading_time?: number | null
+          slug: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          keywords?: string[] | null
+          meta_description?: string | null
+          reading_time?: number | null
+          slug?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       file_history: {
         Row: {
           created_at: string
