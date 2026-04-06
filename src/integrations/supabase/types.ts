@@ -44,6 +44,30 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_keywords: {
+        Row: {
+          created_at: string
+          id: string
+          keyword: string
+          used: boolean
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          keyword: string
+          used?: boolean
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          keyword?: string
+          used?: boolean
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       blog_posts: {
         Row: {
           content: string
@@ -51,6 +75,7 @@ export type Database = {
           id: string
           keywords: string[] | null
           meta_description: string | null
+          meta_title: string | null
           reading_time: number | null
           slug: string
           status: string
@@ -64,6 +89,7 @@ export type Database = {
           id?: string
           keywords?: string[] | null
           meta_description?: string | null
+          meta_title?: string | null
           reading_time?: number | null
           slug: string
           status?: string
@@ -77,6 +103,7 @@ export type Database = {
           id?: string
           keywords?: string[] | null
           meta_description?: string | null
+          meta_title?: string | null
           reading_time?: number | null
           slug?: string
           status?: string
