@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, CheckCircle, AlertTriangle, Trash2 } from "lucide-react";
+import { Loader2, Sparkles, CheckCircle, AlertTriangle, Trash2, Zap, BarChart3, Clock, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 const SUGGESTED_KEYWORDS = [
@@ -34,23 +34,50 @@ interface BlogPost {
   reading_time: number;
 }
 
+interface BlogStats {
+  total: number;
+  today: number;
+  unusedKeywords: number;
+}
+
 export default function BlogGenerator() {
   const [keyword, setKeyword] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [autoGenerating, setAutoGenerating] = useState(false);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
+  const [stats, setStats] = useState<BlogStats>({ total: 0, today: 0, unusedKeywords: 0 });
 
-  const loadPosts = async () => {
-    const { data } = await supabase
-      .from("blog_posts")
-      .select("id, title, slug, status, created_at, reading_time")
-      .order("created_at", { ascending: false })
-      .limit(50);
-    setPosts((data as BlogPost[]) || []);
+  const loadData = async () => {
+    const today = new Date().toISOString().split("T")[0];
+
+    const [postsRes, totalRes, todayRes, kwRes] = await Promise.all([
+      supabase
+        .from("blog_posts")
+        .select("id, title, slug, status, created_at, reading_time")
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase.from("blog_posts").select("id", { count: "exact", head: true }),
+      supabase
+        .from("blog_posts")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", `${today}T00:00:00`),
+      supabase
+        .from("blog_keywords")
+        .select("id", { count: "exact", head: true })
+        .eq("used", false),
+    ]);
+
+    setPosts((postsRes.data as BlogPost[]) || []);
+    setStats({
+      total: totalRes.count || 0,
+      today: todayRes.count || 0,
+      unusedKeywords: kwRes.count || 0,
+    });
     setLoadingPosts(false);
   };
 
-  useState(() => { loadPosts(); });
+  useEffect(() => { loadData(); }, []);
 
   const generateBlog = async () => {
     if (!keyword.trim()) {
@@ -66,11 +93,29 @@ export default function BlogGenerator() {
       if (data?.error) throw new Error(data.error);
       toast.success("Blog post generated successfully!");
       setKeyword("");
-      loadPosts();
+      loadData();
     } catch (e: any) {
       toast.error(e.message || "Failed to generate blog post");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const autoGenerate = async () => {
+    setAutoGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("auto-generate-blogs", {
+        body: { count: 3 },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const published = data?.generated || 0;
+      toast.success(`Auto-generated ${published} blog posts!`);
+      loadData();
+    } catch (e: any) {
+      toast.error(e.message || "Auto-generation failed");
+    } finally {
+      setAutoGenerating(false);
     }
   };
 
@@ -81,18 +126,83 @@ export default function BlogGenerator() {
     } else {
       toast.success("Deleted");
       setPosts((p) => p.filter((x) => x.id !== id));
+      setStats((s) => ({ ...s, total: s.total - 1 }));
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-primary/10 p-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+                <p className="text-xs text-muted-foreground">Total Blogs</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-green-500/10 p-2">
+                <Zap className="h-5 w-5 text-green-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{stats.today}</p>
+                <p className="text-xs text-muted-foreground">Generated Today</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-blue-500/10 p-2">
+                <Clock className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{stats.unusedKeywords}</p>
+                <p className="text-xs text-muted-foreground">Keywords Left</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Auto Generate */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="py-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-foreground flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 text-primary" /> Auto Blog Generator
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Automatically pick 3 unused keywords and generate SEO blogs
+              </p>
+            </div>
+            <Button onClick={autoGenerate} disabled={autoGenerating || stats.unusedKeywords === 0} size="lg">
+              {autoGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
+              {autoGenerating ? "Generating..." : "Generate Now"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Manual Generate */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" /> AI Blog Generator
+            <Sparkles className="h-5 w-5 text-primary" /> Manual Blog Generator
           </CardTitle>
           <CardDescription>
-            Enter a keyword to generate an SEO-optimized blog post automatically.
+            Enter a custom keyword to generate an SEO-optimized blog post.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -128,6 +238,7 @@ export default function BlogGenerator() {
         </CardContent>
       </Card>
 
+      {/* Blog List */}
       <Card>
         <CardHeader>
           <CardTitle>Published Blog Posts ({posts.length})</CardTitle>
