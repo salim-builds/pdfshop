@@ -42,11 +42,44 @@ serve(async (req) => {
       });
     }
 
+    // Fetch existing blog posts for internal linking
+    const { data: existingBlogs } = await supabase
+      .from("blog_posts")
+      .select("slug, title, keywords")
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    const toolPages = [
+      { slug: "/compress-pdf", label: "Compress PDF" },
+      { slug: "/merge-pdf", label: "Merge PDF" },
+      { slug: "/split-pdf", label: "Split PDF" },
+      { slug: "/jpg-to-pdf", label: "JPG to PDF" },
+      { slug: "/html-to-pdf", label: "HTML to PDF" },
+      { slug: "/rotate-pdf", label: "Rotate PDF" },
+      { slug: "/watermark-pdf", label: "Watermark PDF" },
+      { slug: "/protect-pdf", label: "Protect PDF" },
+      { slug: "/crop-pdf", label: "Crop PDF" },
+      { slug: "/repair-pdf", label: "Repair PDF" },
+      { slug: "/redact-pdf", label: "Redact PDF" },
+      { slug: "/remove-pages", label: "Remove Pages" },
+      { slug: "/reorder-pages", label: "Reorder Pages" },
+      { slug: "/extract-pages", label: "Extract Pages" },
+      { slug: "/convert-pdfa", label: "Convert to PDF/A" },
+    ];
+
+    const aiFeatures = [
+      { slug: "/ai-summary", label: "AI PDF Summary" },
+      { slug: "/ai-chat-pdf", label: "AI Chat with PDF" },
+      { slug: "/ai-translate", label: "AI Translate PDF" },
+      { slug: "/ai-search", label: "AI Search PDF" },
+      { slug: "/ai-insights", label: "AI PDF Insights" },
+    ];
+
     const results: any[] = [];
 
     for (const kw of keywords) {
       try {
-        // Check if slug already exists for this keyword
         const potentialSlug = kw.keyword.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
         const { data: existing } = await supabase
           .from("blog_posts")
@@ -55,11 +88,40 @@ serve(async (req) => {
           .maybeSingle();
 
         if (existing) {
-          // Mark as used and skip
           await supabase.from("blog_keywords").update({ used: true, used_at: new Date().toISOString() }).eq("id", kw.id);
           results.push({ keyword: kw.keyword, status: "skipped", reason: "slug exists" });
           continue;
         }
+
+        // Find related blogs by matching keyword words
+        const kwWords = kw.keyword.toLowerCase().split(/\s+/);
+        const relatedBlogs = (existingBlogs || [])
+          .filter(b => {
+            const blogText = `${b.title} ${(b.keywords || []).join(" ")}`.toLowerCase();
+            return kwWords.some(w => w.length > 3 && blogText.includes(w));
+          })
+          .slice(0, 3)
+          .map(b => `- [${b.title}](/blog/${b.slug})`);
+
+        // Pick 2 relevant tool pages
+        const relevantTools = toolPages
+          .filter(t => kwWords.some(w => t.label.toLowerCase().includes(w)))
+          .slice(0, 2);
+        if (relevantTools.length < 2) {
+          const shuffled = toolPages.sort(() => Math.random() - 0.5);
+          for (const t of shuffled) {
+            if (!relevantTools.find(r => r.slug === t.slug)) relevantTools.push(t);
+            if (relevantTools.length >= 2) break;
+          }
+        }
+        const toolLinks = relevantTools.map(t => `- [${t.label}](${t.slug})`).join("\n");
+
+        // Pick 1 AI feature
+        const aiLink = aiFeatures[Math.floor(Math.random() * aiFeatures.length)];
+
+        const blogLinks = relatedBlogs.length > 0
+          ? relatedBlogs.join("\n")
+          : "- [How to Compress PDF Online](/blog/compress-pdf-online)\n- [Best PDF Tools Guide](/blog/best-pdf-tools-2026)";
 
         const systemPrompt = `You are an expert SEO blog writer for PDFShop.in, a free online PDF tools platform.
 Write blog posts that rank on Google. Use simple English. Be helpful and informative.
@@ -71,6 +133,7 @@ IMPORTANT RULES:
 - Include practical tips
 - Format with markdown headings (##, ###)
 - Add bullet points for lists
+- Max 4-5 internal links total, placed naturally within paragraphs (not bunched together)
 
 You must return a JSON object with these exact fields:
 - title: SEO optimized title (include year 2026 if relevant)
@@ -90,10 +153,23 @@ The content MUST include these sections in order:
 6. ## Frequently Asked Questions (3-5 Q&As formatted as ### Question then answer)
 7. ## Conclusion with CTA: "Try PDFShop tools for free"
 
-Internal links to include:
-- Link to 2 relevant tool pages (e.g., [Merge PDF Tool](/merge), [Compress PDF](/compress))
-- Link to 2 other blog topics (e.g., [How to Split PDF](/blog/split-pdf-online))
-- Link to 1 AI feature (e.g., [AI PDF Summary](/ai-summary))
+INTERNAL LINKING INSTRUCTIONS (CRITICAL):
+Naturally weave these links into your paragraphs. Do NOT list them separately. Use the anchor text contextually.
+
+Tool pages to link (pick 2, place in relevant paragraphs):
+${toolLinks}
+
+Related blog posts to link (pick 1-2, place in relevant paragraphs):
+${blogLinks}
+
+AI feature to link (place once in content):
+- [${aiLink.label}](${aiLink.slug})
+
+Example of GOOD natural linking:
+"If you need to reduce file size, our [Compress PDF](/compress-pdf) tool makes it easy. You can also check our guide on [how to merge PDFs](/blog/merge-pdf-online) for combining multiple documents."
+
+Example of BAD linking (avoid this):
+"Related links: [Link1](/page1), [Link2](/page2), [Link3](/page3)"
 
 DO NOT wrap the JSON in markdown code blocks. Return raw JSON only.`;
 

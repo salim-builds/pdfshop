@@ -44,6 +44,58 @@ serve(async (req) => {
       });
     }
 
+    // Fetch existing blogs for internal linking
+    const { data: existingBlogs } = await supabase
+      .from("blog_posts")
+      .select("slug, title, keywords")
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    const toolPages = [
+      { slug: "/compress-pdf", label: "Compress PDF" },
+      { slug: "/merge-pdf", label: "Merge PDF" },
+      { slug: "/split-pdf", label: "Split PDF" },
+      { slug: "/jpg-to-pdf", label: "JPG to PDF" },
+      { slug: "/html-to-pdf", label: "HTML to PDF" },
+      { slug: "/rotate-pdf", label: "Rotate PDF" },
+      { slug: "/watermark-pdf", label: "Watermark PDF" },
+      { slug: "/protect-pdf", label: "Protect PDF" },
+      { slug: "/crop-pdf", label: "Crop PDF" },
+      { slug: "/repair-pdf", label: "Repair PDF" },
+    ];
+
+    const aiFeatures = [
+      { slug: "/ai-summary", label: "AI PDF Summary" },
+      { slug: "/ai-chat-pdf", label: "AI Chat with PDF" },
+      { slug: "/ai-translate", label: "AI Translate PDF" },
+    ];
+
+    const kwWords = keyword.trim().toLowerCase().split(/\s+/);
+    const relatedBlogs = (existingBlogs || [])
+      .filter(b => {
+        const blogText = `${b.title} ${(b.keywords || []).join(" ")}`.toLowerCase();
+        return kwWords.some(w => w.length > 3 && blogText.includes(w));
+      })
+      .slice(0, 3)
+      .map(b => `- [${b.title}](/blog/${b.slug})`);
+
+    const relevantTools = toolPages
+      .filter(t => kwWords.some(w => t.label.toLowerCase().includes(w)))
+      .slice(0, 2);
+    if (relevantTools.length < 2) {
+      const shuffled = toolPages.sort(() => Math.random() - 0.5);
+      for (const t of shuffled) {
+        if (!relevantTools.find(r => r.slug === t.slug)) relevantTools.push(t);
+        if (relevantTools.length >= 2) break;
+      }
+    }
+    const toolLinks = relevantTools.map(t => `- [${t.label}](${t.slug})`).join("\n");
+    const aiLink = aiFeatures[Math.floor(Math.random() * aiFeatures.length)];
+    const blogLinks = relatedBlogs.length > 0
+      ? relatedBlogs.join("\n")
+      : "- [How to Compress PDF Online](/blog/compress-pdf-online)";
+
     const systemPrompt = `You are an expert SEO blog writer for PDFShop.in, a free online PDF tools platform.
 Write blog posts that rank on Google. Use simple English. Be helpful and informative.
 
@@ -53,6 +105,7 @@ IMPORTANT RULES:
 - Write in a friendly, human tone
 - Include practical tips
 - Format with markdown headings (##, ###)
+- Max 4-5 internal links total, placed naturally within paragraphs
 
 You must return a JSON object with these exact fields:
 - title: SEO optimized title (include year 2026 if relevant)
@@ -71,10 +124,19 @@ The content MUST include these sections in order:
 6. ## Frequently Asked Questions (3-5 Q&As formatted as ### Question then answer)
 7. ## Conclusion with CTA
 
-Internal links to include in the content (use markdown links):
-- Link to the relevant tool page (e.g., [Merge PDF Tool](/merge))
-- Link to 2 related tools
-- Link to 1 AI feature (e.g., [AI PDF Summary](/ai-summary))
+INTERNAL LINKING INSTRUCTIONS (CRITICAL):
+Naturally weave these links into your paragraphs. Do NOT list them separately.
+
+Tool pages to link (pick 2):
+${toolLinks}
+
+Related blog posts to link (pick 1-2):
+${blogLinks}
+
+AI feature to link (place once):
+- [${aiLink.label}](${aiLink.slug})
+
+Example of GOOD linking: "If you need to reduce file size, our [Compress PDF](/compress-pdf) tool makes it easy."
 
 DO NOT wrap the JSON in markdown code blocks. Return raw JSON only.`;
 
