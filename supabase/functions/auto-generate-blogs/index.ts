@@ -21,11 +21,11 @@ serve(async (req) => {
       });
     }
 
-    // Parse optional count param (default 3)
-    let count = 3;
+    // Parse optional count param (default 60)
+    let count = 60;
     try {
       const body = await req.json();
-      if (body?.count && typeof body.count === "number") count = Math.min(body.count, 5);
+      if (body?.count && typeof body.count === "number") count = Math.min(body.count, 60);
     } catch { /* no body is fine */ }
 
     // Fetch unused keywords
