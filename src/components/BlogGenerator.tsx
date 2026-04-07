@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, CheckCircle, AlertTriangle, Trash2, Zap, BarChart3, Clock, RefreshCw } from "lucide-react";
+import { Loader2, Sparkles, CheckCircle, AlertTriangle, Trash2, Zap, BarChart3, Clock, RefreshCw, Send, Globe } from "lucide-react";
 import { toast } from "sonner";
 
 const SUGGESTED_KEYWORDS = [
@@ -47,6 +47,8 @@ export default function BlogGenerator() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [stats, setStats] = useState<BlogStats>({ total: 0, today: 0, unusedKeywords: 0 });
+  const [submittingIndexNow, setSubmittingIndexNow] = useState<string | null>(null);
+  const [submittingAll, setSubmittingAll] = useState(false);
 
   const loadData = async () => {
     const today = new Date().toISOString().split("T")[0];
@@ -92,6 +94,10 @@ export default function BlogGenerator() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast.success("Blog post generated successfully!");
+      // Submit to IndexNow
+      if (data?.slug) {
+        submitToIndexNow([data.slug]).catch(() => {});
+      }
       setKeyword("");
       loadData();
     } catch (e: any) {
@@ -116,6 +122,52 @@ export default function BlogGenerator() {
       toast.error(e.message || "Auto-generation failed");
     } finally {
       setAutoGenerating(false);
+    }
+  };
+
+  const submitToIndexNow = async (slugs: string[]) => {
+    const { data, error } = await supabase.functions.invoke("indexnow", {
+      body: { slugs },
+    });
+    if (error) throw error;
+    return data;
+  };
+
+  const handleSubmitSingle = async (slug: string) => {
+    setSubmittingIndexNow(slug);
+    try {
+      const result = await submitToIndexNow([slug]);
+      if (result?.success) {
+        toast.success(`Submitted /blog/${slug} to IndexNow`);
+      } else {
+        toast.error(`IndexNow returned status ${result?.status}`);
+      }
+    } catch {
+      toast.error("Failed to submit to IndexNow");
+    } finally {
+      setSubmittingIndexNow(null);
+    }
+  };
+
+  const handleSubmitAll = async () => {
+    if (posts.length === 0) return;
+    setSubmittingAll(true);
+    try {
+      const slugs = posts.filter(p => p.status === "published").map(p => p.slug);
+      if (slugs.length === 0) {
+        toast.error("No published posts to submit");
+        return;
+      }
+      const result = await submitToIndexNow(slugs);
+      if (result?.success) {
+        toast.success(`Submitted ${result.submitted} URLs to IndexNow`);
+      } else {
+        toast.error(`IndexNow returned status ${result?.status}`);
+      }
+    } catch {
+      toast.error("Failed to submit to IndexNow");
+    } finally {
+      setSubmittingAll(false);
     }
   };
 
@@ -241,7 +293,18 @@ export default function BlogGenerator() {
       {/* Blog List */}
       <Card>
         <CardHeader>
-          <CardTitle>Published Blog Posts ({posts.length})</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Published Blog Posts ({posts.length})</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSubmitAll}
+              disabled={submittingAll || posts.length === 0}
+            >
+              {submittingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Globe className="mr-2 h-4 w-4" />}
+              Submit All to IndexNow
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loadingPosts ? (
@@ -274,6 +337,19 @@ export default function BlogGenerator() {
                       {post.status === "published" ? <CheckCircle className="h-3 w-3 mr-1" /> : <AlertTriangle className="h-3 w-3 mr-1" />}
                       {post.status}
                     </Badge>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      title="Submit to IndexNow"
+                      onClick={() => handleSubmitSingle(post.slug)}
+                      disabled={submittingIndexNow === post.slug}
+                    >
+                      {submittingIndexNow === post.slug ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4 text-primary" />
+                      )}
+                    </Button>
                     <Button size="icon" variant="ghost" onClick={() => deleteBlog(post.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
