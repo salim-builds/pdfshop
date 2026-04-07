@@ -205,6 +205,19 @@ DO NOT wrap the JSON in markdown code blocks. Return raw JSON only.`;
         // Mark keyword as used
         await supabase.from("blog_keywords").update({ used: true, used_at: new Date().toISOString() }).eq("id", kw.id);
 
+        // Notify IndexNow about the new blog post
+        try {
+          const indexNowUrl = `${supabaseUrl}/functions/v1/indexnow`;
+          await fetch(indexNowUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}` },
+            body: JSON.stringify({ slugs: [cleanSlug] }),
+          });
+          console.log(`IndexNow pinged for /blog/${cleanSlug}`);
+        } catch (e) {
+          console.warn("IndexNow ping failed:", e);
+        }
+
         // Small delay between generations to avoid rate limits
         await new Promise(r => setTimeout(r, 2000));
       } catch (e) {
