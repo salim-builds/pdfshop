@@ -106,66 +106,68 @@ export default function BlogList() {
           ) : posts.length === 0 ? (
             <p className="text-center text-muted-foreground py-20">No blog posts yet. Check back soon!</p>
           ) : (
-            <div className="space-y-8">
-              {posts.map((post) => (
-                <article key={post.id} className="group rounded-lg border border-border bg-background p-6 transition-shadow hover:shadow-md">
-                  <Link to={`/blog/${post.slug}`}>
-                    <h2 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
-                      {post.title}
-                    </h2>
-                    {post.meta_description && (
-                      <p className="mt-2 text-muted-foreground">{post.meta_description}</p>
-                    )}
-                    <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" /> {post.reading_time} min read
-                      </span>
-                      <span>{new Date(post.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}</span>
-                    </div>
-                    {post.keywords?.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {post.keywords.slice(0, 4).map((kw) => (
-                          <Badge key={kw} variant="secondary" className="text-xs">{kw}</Badge>
-                        ))}
+            <>
+              <div className="space-y-8">
+                {posts.map((post) => (
+                  <article key={post.id} className="group rounded-lg border border-border bg-background p-6 transition-shadow hover:shadow-md">
+                    <Link to={`/blog/${post.slug}`}>
+                      <h2 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
+                        {post.title}
+                      </h2>
+                      {post.meta_description && (
+                        <p className="mt-2 text-muted-foreground">{post.meta_description}</p>
+                      )}
+                      <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" /> {post.reading_time} min read
+                        </span>
+                        <span>{new Date(post.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}</span>
                       </div>
-                    )}
-                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">
-                      Read more <ArrowRight className="h-4 w-4" />
-                    </span>
-                  </Link>
-                </article>
-              ))}
-            </div>
+                      {post.keywords?.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {post.keywords.slice(0, 4).map((kw) => (
+                            <Badge key={kw} variant="secondary" className="text-xs">{kw}</Badge>
+                          ))}
+                        </div>
+                      )}
+                      <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">
+                        Read more <ArrowRight className="h-4 w-4" />
+                      </span>
+                    </Link>
+                  </article>
+                ))}
+              </div>
 
-            {totalPages > 1 && (
-              <Pagination className="mt-12">
-                <PaginationContent>
-                  {currentPage > 1 && (
-                    <PaginationItem>
-                      <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); goToPage(currentPage - 1); }} />
-                    </PaginationItem>
-                  )}
-                  {getPageNumbers().map((p, i) =>
-                    p === "ellipsis" ? (
-                      <PaginationItem key={`e-${i}`}>
-                        <PaginationEllipsis />
+              {totalPages > 1 && (
+                <Pagination className="mt-12">
+                  <PaginationContent>
+                    {currentPage > 1 && (
+                      <PaginationItem>
+                        <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); goToPage(currentPage - 1); }} />
                       </PaginationItem>
-                    ) : (
-                      <PaginationItem key={p}>
-                        <PaginationLink href="#" isActive={p === currentPage} onClick={(e) => { e.preventDefault(); goToPage(p); }}>
-                          {p}
-                        </PaginationLink>
+                    )}
+                    {getPageNumbers().map((p, i) =>
+                      p === "ellipsis" ? (
+                        <PaginationItem key={`e-${i}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      ) : (
+                        <PaginationItem key={p}>
+                          <PaginationLink href="#" isActive={p === currentPage} onClick={(e) => { e.preventDefault(); goToPage(p as number); }}>
+                            {p}
+                          </PaginationLink>
+                        </PaginationItem>
+                      )
+                    )}
+                    {currentPage < totalPages && (
+                      <PaginationItem>
+                        <PaginationNext href="#" onClick={(e) => { e.preventDefault(); goToPage(currentPage + 1); }} />
                       </PaginationItem>
-                    )
-                  )}
-                  {currentPage < totalPages && (
-                    <PaginationItem>
-                      <PaginationNext href="#" onClick={(e) => { e.preventDefault(); goToPage(currentPage + 1); }} />
-                    </PaginationItem>
-                  )}
-                </PaginationContent>
-              </Pagination>
-            )}
+                    )}
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </>
           )}
         </div>
       </section>
