@@ -136,6 +136,36 @@ export default function BlogList() {
                 </article>
               ))}
             </div>
+
+            {totalPages > 1 && (
+              <Pagination className="mt-12">
+                <PaginationContent>
+                  {currentPage > 1 && (
+                    <PaginationItem>
+                      <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); goToPage(currentPage - 1); }} />
+                    </PaginationItem>
+                  )}
+                  {getPageNumbers().map((p, i) =>
+                    p === "ellipsis" ? (
+                      <PaginationItem key={`e-${i}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={p}>
+                        <PaginationLink href="#" isActive={p === currentPage} onClick={(e) => { e.preventDefault(); goToPage(p); }}>
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
+                  {currentPage < totalPages && (
+                    <PaginationItem>
+                      <PaginationNext href="#" onClick={(e) => { e.preventDefault(); goToPage(currentPage + 1); }} />
+                    </PaginationItem>
+                  )}
+                </PaginationContent>
+              </Pagination>
+            )}
           )}
         </div>
       </section>
